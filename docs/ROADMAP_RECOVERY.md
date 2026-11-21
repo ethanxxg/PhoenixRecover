@@ -109,7 +109,7 @@
 | A1-4b-a | 自动布局探测 + 配置驱动的非 GUI 组合只读源 | ✅ `disk/RaidProbe.h`（mdadm 0.90 / 1.0 / 1.1 / 1.2 超块解析与校验和、盘序 / chunk / layout / data_offset / 降级槽取自元数据、几何经 `VerifyStripe()` 与卷内已知明文锚点复核、受限盲探测且歧义/预算超限一律拒绝）+ `disk/ScanSourceChain.h`（严格 `key=value` 配置 → 容器解包 → RAID/探测 → BitLocker 解锁 → ReFS 桥接，统一 `IVirtualDiskReader` 输出）；CTest #75 `RaidProbe`、#76 `ScanSourceChain`。**零 GUI 改动、零设备句柄、零写方法**；接线为注入式字节源，尚未接 `SectorReader` 设备主路径。见下文「A1-4b-a 实装说明」 |
 | A1-4b-b | 真实阵列兼容与设备主路径接线 | **待办**：SNIA DDF / Intel RIS / 厂商专有布局（HP 延迟 parity、Promise wide-pace Q、RAIDZ、far/offset RAID10）、mdadm reshape / bitmap / PPL / journal / bblog / 坏块日志、4Kn、真实阵列金标样本、事件数不一致时的副本仲裁；以及把 `SourceChain` 接到 `SectorReader` 的**非 GUI** 设备入口。真实阵列金标完成前不得在界面暴露 RAID 入口，也不得宣称「已支持真实阵列恢复」 |
 | A1-5a | ReFS **只读解析引擎** | ✅ `fs/refs/RefsCrypto.h`（CRC-32C / CRC-64/NVME / SHA-256 / VBR ROR1+ADD）+ `fs/refs/RefsVolume.h`（header-only 纯 C++17、零 Qt/Win32/写）：VBR 几何与自校验、`-FVE-FS-` 加密卷识别、SUPB 三副本 / CHKP 双副本择优、13 根页引用 Merkle 校验、容器表 VLCN→PLCN、MSB+ B+ 树（根描述/内部节点/叶行/不变量）、对象表 / 父子表、目录项两种布局、inline 与 24 字节 extent 的文件数据重组；CTest #73 `RefsCrypto`、#74 `RefsVolume`。**合成卷金标，`fs/` 层独立实现，未复用 `FileSystem` 接口、未接 `SectorReader`、未接 UI**。见下文「A1-5a 覆盖边界」 |
-| A1-5b | ReFS 真实卷兼容与接口接线 | **待办**：真实 Windows ReFS 卷金标样本（3.4–3.14 / 4Kn / 64K 簇 / SHA-256 / 升级卷）、legacy v3.4–v3.9 对象表与 104 字节页引用、embedded `$DATA` 完整 inner-header + 嵌入式 B+ 树节点 framing、split（kf=0x02）文件的 type-0x40  backing record、ADS / 快照 / 压缩 / integrity streams / 硬链接、目录名→子目录 OID 绑定、SUPB/CHKP 自校验精确清零范围复核；以及 `FileSystem` 适配层与配置驱动的非 GUI 扫描入口。真实卷金标完成前不得宣称「已支持真实 ReFS 卷恢复」，也不得在 UI 暴露 ReFS 入口 |
+| A1-5b | ReFS 真实卷兼容与接口接线 | **接口接线已完成（2026-11-21，零 GUI 改动）**：新增 `fs/refs/RefsParser`（`FileSystem` 适配层：`SectorReader`+`Partition` → `ReaderImage : IRefsImage` 只读桥，VLCN→PLCN 折算成绝对簇号填入 `FileNode::clusters`，inline `$DATA` 填 `residentData`），探测链在 **FAT 之前**接入 ReFS（ReFS VBR 是 NTFS 式外观，晚于 FAT 会被误判），`RecoverEngine::FsVolumeHints` 增 `isRefs` 并复用 `IsClusterRelative()`；CTest `RefsRecoverBytes`（80 项，`refs-golden` 6 条目含嵌套 `subdir/inside.txt`，逐文件 SHA-256 + 整镜像 FNV-1a）。**本阶段查出并修复两个真实缺陷**（见下文）。**仍待办**：真实 Windows ReFS 卷金标样本（3.4–3.14 / 4Kn / 64K 簇 / SHA-256 / 升级卷）、legacy v3.4–v3.9 对象表与 104 字节页引用、embedded `$DATA` 完整 inner-header + 嵌入式 B+ 树节点 framing、split（kf=0x02）文件的 type-0x40 backing record、ADS / 快照 / 压缩 / integrity streams / 硬链接、SUPB/CHKP 自校验精确清零范围复核。真实卷金标完成前不得宣称「已支持真实 ReFS 卷恢复」，也不得在 UI 暴露 ReFS 入口 |
 | A1-6 | 智能加载损坏 NTFS、按类型恢复参数化（范围/对齐/最大尺寸/类型筛选） | **签名多模式匹配（AC）引擎底座已完成**（`scan/SignatureMatcher.h` header-only 流式 Aho-Corasick + CTest #77 `SignatureMatcher`）；**已接 `RawScan` 主路径**：`SignatureDB::ScanBatch` 流式 AC 批扫描替换线性 `memcmp`（A1-6，CTest #77 + 接线验证）；**已接 `DeepScan` 智能加载损坏 NTFS**：识别 NTFS/FAT boot 但结构化解析 < 8 文件时回退 `RawScan` RAW 雕刻（A1-7，CTest `DeepScanFallback` 全绿）；**并行轨 RAW 扫描（A1-8）**：跨 N 线程分块 + 512 重叠 + 按 rawOffset 合并（`RawScan::Run(reader,partition,numThreads)`，每线程独立 `SectorReader`+`SignatureDB`，CTest `RawScanParallel` 对 N=2/4/8 与串行逐偏移一致）；**A1-9 已完成 `SignatureDB::LoadFromFile` 的 Qt 解耦**：改用 `std::ifstream`(`Utils::WideToUtf8`) + 新增零依赖 `scan/SignatureJson.h`，headless/非 GUI 与 GUI 构建行为一致（CTest `SignatureDBLoad` 90 项全绿），并补齐文档引用但缺失的 `testdata/custom_signatures.json` 样例 |
 
 > **A1-1 拆分说明**：原条目的「虚拟磁盘加载与格式互转」中，**只读加载**归 A1-1a/1b，**格式互转**会产出新文件，属写能力，移至 A2（与镜像还原同轨），并受 `WriteGuard` 的 `WriteTargetDisk` / `WriteNewFile` 授权约束。
@@ -367,6 +367,8 @@
 | **W8 可选严格 header 校验（CAR-002，默认 OFF）** | `tests/test_rawscan_strict_headers.cpp` / CTest `RawScanStrictHeaders`；PNG/GIF/JPEG/PDF/ZIP 最小结构校验 | 11/11 全绿；默认关闭 → 行为零变化；开启后 FP 121→115（-5.0%）、precision 11.68%→12.21%、**零 FN**、recall 100%。无生产调用方开启；改 `scan/RawScan.cpp/.h`。GIF/JPEG 规则保守（噪声易巧合通过），故「减少」而非「清零」弱匹配，测试断言据实为「严格减少裸命中」 |
 | **W9 DFTT FAT RecoverBytes 性能 triage** | 仅改 `tests/integration/test_dftt_fat_recover_bytes.cpp` 的测试侧暴力簇重建 oracle `TryReconstructFat16ByMd5` | 该 oracle 在 `frag2/mult2/frag3` 上**挂死**（>120 s）；根因：每候选链 `CryptAcquireContext`/`CryptReleaseContext` + 整文件 MD5，Phase C 组合搜索（remaining=3、freeRuns=1 时约 1M 候选）放大。终修：自研可克隆 `FastMd5`（RFC1321，已知向量 + clone 路径自校验通过）替换逐候选 CryptoAPI、整卷一次性读内存、预哈希固定首簇前缀、3M 候选硬上限兜底。`DFTT_FAT_RecoverBytes` **5.0 s** 通过（原挂死/28 s），6 个必过文件（含 3 个重建的碎片化已删文件）全部金标 MD5 恢复。该 oracle 仅测试侧，生产 `FatParser` 无暴力重建，**无生产行为变化** |
 | **W10 全量回归与文档/工作记忆同步** | 受影响生产文件（Ext4Parser / ExfatParser / RawScan）并行回归 13/13 全绿（11.48 s） | W6–W9 四个新测试同跑全绿；W6–W9 工作写入 `.workbuddy/memory/2026-11-08.md`；§8「本批次明确未完成」已据实更新（见下） |
+| **W11 ext4 深度恢复对齐（2026-11-21）** | 新增独立金标生成器 `tools/make_ext4_fixture.py`（纯 Python 自写全部磁盘结构，不依赖 `mke2fs`；本机 WSL 被安全策略拦截）+ CTest `Ext4DepthFeatures`；修复 `fs/ext4/Ext4Parser.cpp` 四处真实缺陷（见下 CAR-004） | **129 checks / 0 failure**，5 个变体：extents+间接块+slack 删除名+孤儿 inode / uninit extent / bigalloc / inline_data（文件与目录均跨 60 B 边界走 ibody xattr）/ **多级 extent 树 + 稀疏洞**（depth=1 索引节点、文件中间 3 段空洞，以及 legacy 间接块洞）。每文件 SHA-256 + 整镜像 FNV-1a 只读不变量 |
+| **W12 ReFS 深度恢复接线（2026-11-21）** | 新增 `fs/refs/RefsParser.{h,cpp}`（`FileSystem` 适配层）+ 探测链接入 + `RecoverEngine` 簇语义扩展 + CTest `RefsRecoverBytes`；修复两个真实缺陷（见下 CAR-005） | **80 checks / 0 failure**（`refs-golden`：inline 2 个、extent 2 个、嵌套 `subdir/inside.txt` 1 个）。两轮源码级负向验证（VBR 读回 offset 11/13 → 4 项 FAIL；关子目录绑定 → 4 项 FAIL）后恢复全绿 |
 
 ### CAR-003：已删 exFAT 连续文件被 FAT 拼接器改写（W3 门禁发现并修复）
 
@@ -378,6 +380,24 @@
 4. `RecoverEngine` 按簇链写出，字节错位。
 
 **修复**（`fs/exfat/ExfatParser.cpp`）：`NoFatChain` 是 stream 的盘上属性，删除只清目录项 type 高位，故 `chainNoFat = noFatChain` 对已删条目同样成立；并在 `noFatChain` 时跳过 FAT 启发式拼接器（连续流无碎片可拼）。非连续 exFAT 流行为不变，exFAT 仍保留恢复期的专用 `FatFragmentStitcher::TryImproveExfatNode()` 路径。修复后簇链 `[2392, 2400]`、`rawOffset=1224704`、MD5 与 oracle 一致。
+
+### CAR-004：ext4 深度恢复四处缺陷（W11 门禁发现并修复）
+
+`Ext4DepthFeatures` 首跑暴露 3 个缺陷，追加稀疏变体后又暴露第 4 个，全部在 `fs/ext4/Ext4Parser.cpp`：
+
+1. **uninit extent 读出陈旧字节**：`ee_len > 32768` 表示「已分配但内容未定义」，按 ext4 规范必须返回全零。原实现直接把 `ee_start` 当有效数据写出，合成镜像里填的 `0xAA` 被原样恢复——这是**静默的错误数据**，比丢文件更危险。修复：`len -= 32768` 后发 `(0, 1)` 零标记，由 `RecoverEngine` 填零。
+2. **bigalloc 整卷偏移错误**：`s_log_cluster_size > s_log_block_size` 时 extent 的 `ee_start`/`ee_len` 以**簇**为单位（1 簇 = 2^n 块），原实现按块解释，整卷数据错位。修复：`Open()` 计算 `m_clusterRatio`，`ParseExtentNode()` 对 start/len 同时缩放（`ee_block` 仍是逻辑块号，不缩放）。
+3. **`inline_data` 完全不可用**：`EXT4_INLINE_DATA_FL` 文件的 ≤60 B 数据在 `i_block[]`，余量在 in-inode xattr（ibody）的 `system.data` 项（末尾 magic `0xEA020000`）。原实现既不读 ibody 也不识别内联目录，导致 120 B 文件内容错误、**内联目录整棵子树丢失**。修复：新增 `ReadInodeRaw` / `ReadInlineData` / `ParseInodeXattrData`，目录侧跳过 4 B parent inode 后复用 `ParseDirBlock`，文件侧失败则标 `Lost` 而非编造数据。
+4. **稀疏文件的空洞未补，后续数据整体前移（最隐蔽）**：`FileNode::clusters` 是平铺块号数组，`RecoverEngine` 靠 `entry == 0` 识别稀疏并写零；但 `ParseExtentNode` 只追加实际 extent、`GetIndirectBlocks` 还显式 `if (blocks[i] != 0)` 跳过零槽，于是「洞之后的每个字节」都落在错误偏移上——文件大小对、哈希错，**属于静默数据损坏**。修复三处：① `GetExtentBlocks` 引入 `nextLogicalBlock` 游标，`logical > cursor` 时补 `(0, gap)`（多级树共享同一游标）；② 间接块 `level==1` 的零项按洞计（`--remaining`），`level>1` 的零项按子树容量 `entriesPerBlock^(level-1)` 补洞，`i_block[12..14]` 为 NULL 但仍有未覆盖逻辑块时同样补零；③ 新增 `AppendBlockRun()` 统一展开，`start == 0` 展开为 `length` 个零而不是 `0,1,2,…`（块 0 从不分配给文件，标记无歧义）。
+
+金标由 `tools/make_ext4_fixture.py` 独立生成（自写超块/组描述符/inode/extent 树（含 depth=1 索引节点）/xattr，不依赖 `mke2fs`），每文件 SHA-256 与整镜像 FNV-1a 双重校验。
+
+### CAR-005：ReFS 接入生产链两处缺陷（W12 门禁发现并修复）
+
+1. **VBR 几何按 NTFS BPB 读取（严重）**：`RecoverEngine::ParseFsVolumeHints` 的 ReFS 分支读 offset 11/13，但 ReFS VBR **不是 BPB**——`+0x03` 是 `"ReFS\0\0\0\0"`、`+0x10` 是 `"FSRS"`、`+0x14` 是固定 `0x0200` 标记，真实几何在 `+0x20`(u32 bytesPerSector) / `+0x24`(u32 sectorsPerCluster)。offset 11/13 读到全零 → 回退成「1 簇 = 1 扇区」，`photo.bin`（12288 B / 3 簇）只写出 1536 B 后 `size mismatch`。修复后按真实布局解析，并加 `"FSRS"` 双重确认。**这个缺陷只在真实 ReFS 卷上暴露,`RefsVolume` 自身的单元测试碰不到,因为引擎侧解析与 `fs/refs` 层是两条独立代码路径。**
+2. **目录名无法绑定子对象（嵌套目录整棵丢失）**：ReFS 目录项（`kf=0x01`/`kf=0x02`）只带**条目序号**（该目录内 1,2,3…），**不携带子对象 OID**；`kf=0x02` 的 84 字节变体尾部 12 字节也全为零。原实现把该序号当 OID 调 `ListDirectory()`，必然落空。修复：以 **parent-child 表**（唯一权威 `parent OID → child OID`）重建树，名字按 B+ 树序绑定；当子对象数多于目录名数时，先剔除「B+ 树为空」的对象（命名目录必有行，别名/流对象必空），**仅在该剔除能让计数相等时才生效**，避免误删真实的空子目录。
+
+`refs-golden` 的 `refs_v314_*` 系列有 `subdir/inside.txt` 两级结构，是本条的唯一字节级门禁。
 
 ### 本批次已闭环（W6–W9，此前列为未完成，现据实更正）
 
@@ -394,6 +414,11 @@
 
 ### 操作注记（非缺陷，回归时务必遵守）
 
+- **全量 `ctest` 的 6 项既有失败（2026-11-21 用 `git stash` 回退全部改动后复现，与本轮 ext4/ReFS 工作无关）**：
+  `DFR_NIST_Compare` / `DFR_NIST_BatchStrict`（真实 DFR 镜像的已删文件计数越出 NIST 区间，如 dfr-06-fat `del=0` 期望 3）、
+  `DFTT_11_CARVE_FAT`（FAT 雕刻）；以及 3 项 `Not Run`：`DFTT_Recover_GoldenBundle` / `Testdata_EwfExportReady` / `RepairSamplesIntegrity`
+  ——后 3 项 CTest 记录的 `Command: ""`，即 `find_program(POWERSHELL)` 为空，是**运行 ctest 时 PATH 被精简到不含 `WindowsPowerShell`** 所致；
+  **实测把 `C:/Windows/System32/WindowsPowerShell/v1.0` 加回 PATH 后 3/3 Passed**，并非缺金标。判定标准：**先跑基线再归因，不要把这些算到新改动头上**。
 - GCC14 的 `std::filesystem` 相关可执行文件在旧版 `libstdc++-6.dll`（Qt MinGW 7.3）先于 MSYS2 运行库出现在 PATH 时会以 `0xc0000139` 启动失败；**所有 GCC14 ctest / exe 运行命令须把 `/c/msys64/mingw64/bin` 置于 PATH 首位**。
 - `FileCarving_Graphic_All` 本机耗时约 245 s，`--timeout 240` 会误报 Timeout，需单独用 `--timeout 900` 运行（32 项合并跑的一轮即因此出现 1 项 Timeout，非逻辑失败）。
 - `testdata/tools/Compare-RecoveryResults.ps1` 并不存在；`expected_results.csv` 是 W3 场景矩阵而非「文件名 → MD5/大小」基线，`TEST_PLAN.md §6.2` 的旧描述已更正。

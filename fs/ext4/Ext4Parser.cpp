@@ -76,6 +76,18 @@ bool Ext4Parser::Open(SectorReader& reader, const Partition& partition)
     m_hasExtents  = (m_sb.s_feature_incompat & EXT4_FEATURE_INCOMPAT_EXTENTS)  != 0;
     m_is64Bit     = (m_sb.s_feature_incompat & EXT4_FEATURE_INCOMPAT_64BIT)    != 0;
     m_hasFiletype = (m_sb.s_feature_incompat & EXT4_FEATURE_INCOMPAT_FILETYPE) != 0;
+    m_hasInlineData = (m_sb.s_feature_incompat & EXT4_FEATURE_INCOMPAT_INLINE_DATA) != 0;
+
+    // bigalloc: s_log_cluster_size describes the allocation cluster.  When it
+    // is larger than s_log_block_size every extent's ee_start / ee_len counts
+    // CLUSTERS, not blocks.  Without this scaling a whole bigalloc volume is
+    // read at the wrong offset (and dir trees come out empty).
+    m_clusterRatio = 1;
+    if (m_sb.s_log_cluster_size > m_sb.s_log_block_size) {
+        const uint32_t shift = m_sb.s_log_cluster_size - m_sb.s_log_block_size;
+        if (shift <= 8)
+            m_clusterRatio = 1u << shift;
+    }
 
     // Group descriptor size
     m_descSize = (m_is64Bit && m_sb.s_desc_size >= 64) ? m_sb.s_desc_size : 32;
@@ -170,6 +182,126 @@ bool Ext4Parser::ReadInode(uint32_t inodeNum, EXT4_INODE& outInode)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// ReadInodeRaw – same addressing as ReadInode but keeps the whole inode so
+// that the in-inode xattr area (ibody) survives for inline_data payloads.
+// ─────────────────────────────────────────────────────────────────────────────
+bool Ext4Parser::ReadInodeRaw(uint32_t inodeNum, std::vector<uint8_t>& raw)
+{
+    raw.clear();
+    if (inodeNum == 0 || inodeNum > m_sb.s_inodes_count) return false;
+
+    const uint32_t idx      = inodeNum - 1;
+    const uint32_t group    = idx / m_sb.s_inodes_per_group;
+    const uint32_t localIdx = idx % m_sb.s_inodes_per_group;
+    if (group >= m_groupCount) return false;
+    if (m_inodeSize < 128) return false;
+
+    uint64_t inodeTableBlock = m_groupDescs[group].bg_inode_table_lo;
+    if (m_is64Bit)
+        inodeTableBlock |= (uint64_t)m_groupDescs[group].bg_inode_table_hi << 32;
+
+    const uint64_t off = m_partStartByte + inodeTableBlock * m_blockSize
+                       + static_cast<uint64_t>(localIdx) * m_inodeSize;
+    raw.resize(m_inodeSize);
+    return m_reader->ReadBytes(off, raw.data(), m_inodeSize);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ParseInodeXattrData – find the "system.data" entry in the in-inode xattr
+// area and return its value.  This is where inline_data keeps everything that
+// does not fit into the 60 bytes of i_block[].
+//
+// Layout (Documentation/filesystems/ext4/inodes.rst, "In-inode xattrs"):
+//   entries start at 128 + i_extra_isize
+//   each entry: u8 name_len, u8 name_index, u16 value_offs, u32 value_size,
+//               u32 hash, then name[] (padded to 4 bytes)
+//   value lives at (inode start + value_offs), value_size bytes
+//   the area ends at inode_size - 4, which holds the magic 0xEA020000
+// ─────────────────────────────────────────────────────────────────────────────
+bool Ext4Parser::ParseInodeXattrData(const std::vector<uint8_t>& raw,
+                                     const EXT4_INODE& inode, uint64_t wantBytes,
+                                     std::vector<uint8_t>& out)
+{
+    out.clear();
+    if (raw.size() < 132) return false;
+
+    const uint16_t extraIsize = inode.i_extra_isize;
+    if (extraIsize == 0 || extraIsize > 128) return false;
+
+    const uint32_t start = 128u + extraIsize;
+    if (start + 16 > raw.size()) return false;
+
+    const uint32_t magicOff = static_cast<uint32_t>(raw.size()) - 4;
+    const uint32_t magic = static_cast<uint32_t>(raw[magicOff])
+                         | (static_cast<uint32_t>(raw[magicOff + 1]) << 8)
+                         | (static_cast<uint32_t>(raw[magicOff + 2]) << 16)
+                         | (static_cast<uint32_t>(raw[magicOff + 3]) << 24);
+    if (magic != EXT4_XATTR_IBODY_MAGIC) return false;
+
+    uint32_t pos = start;
+    for (int guard = 0; guard < 32; ++guard) {
+        if (pos + 16 > magicOff) return false;
+
+        const uint8_t  nameLen   = raw[pos];
+        const uint8_t  nameIndex = raw[pos + 1];
+        const uint16_t valueOffs = static_cast<uint16_t>(raw[pos + 2])
+                                 | (static_cast<uint16_t>(raw[pos + 3]) << 8);
+        const uint32_t valueSize = static_cast<uint32_t>(raw[pos + 4])
+                                 | (static_cast<uint32_t>(raw[pos + 5]) << 8)
+                                 | (static_cast<uint32_t>(raw[pos + 6]) << 16)
+                                 | (static_cast<uint32_t>(raw[pos + 7]) << 24);
+
+        if (nameLen == 0) break;                  // end of entries
+        if (pos + 16 + nameLen > magicOff) return false;
+
+        const bool isSystem = (nameIndex == EXT4_XATTR_INDEX_SYSTEM);
+        const bool isData   = (nameLen == 4 &&
+                              raw[pos + 16] == 'd' && raw[pos + 17] == 'a' &&
+                              raw[pos + 18] == 't' && raw[pos + 19] == 'a');
+        if (isSystem && isData) {
+            if (valueSize == 0) return false;
+            if (static_cast<uint64_t>(valueOffs) + valueSize > raw.size()) return false;
+            const uint64_t take = (std::min)(wantBytes,
+                                             static_cast<uint64_t>(valueSize));
+            out.assign(raw.begin() + valueOffs,
+                       raw.begin() + valueOffs + static_cast<std::ptrdiff_t>(take));
+            return !out.empty();
+        }
+
+        pos += static_cast<uint32_t>(16 + ((nameLen + 3u) & ~3u));
+    }
+    return false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ReadInlineData – assemble an inline_data file/directory body:
+//   0..59   bytes from i_block[]
+//   60..    bytes from the system.data ibody xattr
+// Returns false when i_size claims more bytes than we can account for, so the
+// caller can mark the node instead of emitting a silently truncated file.
+// ─────────────────────────────────────────────────────────────────────────────
+bool Ext4Parser::ReadInlineData(uint32_t inodeNum, const EXT4_INODE& inode,
+                                uint64_t size, std::vector<uint8_t>& out)
+{
+    out.clear();
+    if (size == 0) return true;
+    if (size > (1u << 20)) return false;          // inline data is tiny by design
+
+    const uint32_t head = static_cast<uint32_t>((std::min)(size, uint64_t(60)));
+    out.assign(inode.i_block, inode.i_block + head);
+
+    if (size <= 60) return true;
+
+    std::vector<uint8_t> raw;
+    if (!ReadInodeRaw(inodeNum, raw)) return false;
+
+    std::vector<uint8_t> tail;
+    if (!ParseInodeXattrData(raw, inode, size - 60, tail)) return false;
+    out.insert(out.end(), tail.begin(), tail.end());
+    return out.size() >= size;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // GetExtentBlocks – parse extent tree to get physical blocks
 // ─────────────────────────────────────────────────────────────────────────────
 std::vector<std::pair<uint64_t, uint32_t>> Ext4Parser::GetExtentBlocks(const EXT4_INODE& inode)
@@ -182,12 +314,18 @@ std::vector<std::pair<uint64_t, uint32_t>> Ext4Parser::GetExtentBlocks(const EXT
         return result;
     }
 
-    ParseExtentNode(inode.i_block, hdr->eh_depth, result);
+    // Walk the tree in logical order, emitting (0, n) for every gap.  A sparse
+    // file is nothing but gaps between extents: without these markers the
+    // later extents would be written back-to-back and every byte after the
+    // first hole would land at the wrong offset.
+    uint64_t nextLogicalBlock = 0;
+    ParseExtentNode(inode.i_block, hdr->eh_depth, result, nextLogicalBlock);
     return result;
 }
 
 void Ext4Parser::ParseExtentNode(const uint8_t* data, uint16_t depth,
-                                  std::vector<std::pair<uint64_t, uint32_t>>& out)
+                                  std::vector<std::pair<uint64_t, uint32_t>>& out,
+                                  uint64_t& nextLogicalBlock)
 {
     const auto* hdr = reinterpret_cast<const EXT4_EXTENT_HEADER*>(data);
     if (hdr->eh_magic != EXT4_EXT_MAGIC) return;
@@ -207,12 +345,41 @@ void Ext4Parser::ParseExtentNode(const uint8_t* data, uint16_t depth,
             uint16_t len = ext->ee_len;
             if (len == 0)
                 continue;
-            // ee_len > 32768 encodes length as (len - 32768); do not skip.
-            if (len > 32768)
+            // ee_len > 32768 means the extent is UNINITIALIZED: the logical
+            // range reads as zeros, whatever stale bytes the blocks still
+            // hold must never be emitted as recovered content.  Emit zero
+            // markers (cluster 0 == sparse/zero, honoured by RecoverEngine)
+            // instead of the on-disk block numbers.
+            const bool uninit = (len > 32768);
+            if (uninit)
                 len = static_cast<uint16_t>(len - 32768);
             if (len == 0)
                 continue;
-            out.emplace_back(startBlock, len);
+
+            // ee_block is always a logical BLOCK index; only ee_start/ee_len
+            // switch to clusters under bigalloc.
+            const uint64_t logical = ext->ee_block;
+            uint32_t spanBlocks = len;
+            if (m_clusterRatio > 1) {
+                startBlock *= m_clusterRatio;
+                spanBlocks = std::min<uint32_t>(
+                    static_cast<uint32_t>(len) * m_clusterRatio, 0xFFFFu);
+                len = static_cast<uint16_t>(spanBlocks);
+            }
+
+            if (logical > nextLogicalBlock) {
+                const uint64_t gap = logical - nextLogicalBlock;
+                out.emplace_back(0, static_cast<uint32_t>(
+                    std::min<uint64_t>(gap, 0xFFFFFFFFull)));
+            }
+
+            if (uninit) {
+                for (uint16_t j = 0; j < len; ++j)
+                    out.emplace_back(0, 1);
+            } else {
+                out.emplace_back(startBlock, len);
+            }
+            nextLogicalBlock = (std::max)(nextLogicalBlock, logical + spanBlocks);
         }
     } else {
         // Index node: contains EXT4_EXTENT_IDX entries
@@ -223,10 +390,32 @@ void Ext4Parser::ParseExtentNode(const uint8_t* data, uint16_t depth,
             uint64_t childBlock = idx->ei_leaf_lo
                                 | ((uint64_t)idx->ei_leaf_hi << 32);
             if (!ReadBlock(childBlock, childBuf.data())) continue;
-            ParseExtentNode(childBuf.data(), depth - 1, out);
+            ParseExtentNode(childBuf.data(), depth - 1, out, nextLogicalBlock);
         }
     }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// AppendBlockRun – expand a (start, length) run into per-block cluster numbers
+//
+// start == 0 is the HOLE marker produced by GetExtentBlocks/GetIndirectBlocks:
+// it means "length logical blocks that read as zeros", so it must expand into
+// `length` zero entries.  Treating it as block 0 would emit 0,1,2,3 and shift
+// every following byte of a sparse file.  (Block 0 is never allocated to a
+// file, so there is no ambiguity.)
+// ─────────────────────────────────────────────────────────────────────────────
+namespace {
+void AppendBlockRun(std::vector<uint64_t>& dst, uint64_t start, uint32_t length)
+{
+    if (length == 0) return;
+    if (start == 0) {
+        dst.insert(dst.end(), length, 0);
+        return;
+    }
+    for (uint32_t j = 0; j < length; ++j)
+        dst.push_back(start + j);
+}
+} // namespace
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GetIndirectBlocks – legacy block map (ext2/ext3 style)
@@ -241,25 +430,33 @@ std::vector<std::pair<uint64_t, uint32_t>> Ext4Parser::GetIndirectBlocks(const E
     uint32_t reqBlocks = static_cast<uint32_t>((fileSize + m_blockSize - 1) / m_blockSize);
     uint32_t remaining = reqBlocks;
 
-    // Direct blocks: i_block[0..11]
+    // Direct blocks: i_block[0..11].  A zero slot inside the file's logical
+    // range is a HOLE, not "unused": it must still emit a zero marker, or the
+    // blocks that follow it would be written back-to-back and every byte after
+    // the hole would land at the wrong offset.  `remaining` is what separates
+    // a hole from the trailing unused slots.
     for (int i = 0; i < 12 && remaining > 0; ++i) {
-        if (blocks[i] != 0) {
-            result.emplace_back(blocks[i], 1);
-            --remaining;
-        }
+        result.emplace_back(blocks[i], 1);   // 0 == sparse/zero marker
+        --remaining;
     }
 
-    // Indirect block: i_block[12]
-    if (remaining > 0 && blocks[12] != 0)
-        ReadIndirectLevel(blocks[12], 1, result, remaining);
-
-    // Double indirect: i_block[13]
-    if (remaining > 0 && blocks[13] != 0)
-        ReadIndirectLevel(blocks[13], 2, result, remaining);
-
-    // Triple indirect: i_block[14]
-    if (remaining > 0 && blocks[14] != 0)
-        ReadIndirectLevel(blocks[14], 3, result, remaining);
+    // Indirect trees.  A NULL root pointer with logical blocks still pending
+    // means the whole subtree is a hole; emit zero markers for it so the
+    // recovered file keeps its offsets.
+    const uint64_t perBlock = m_blockSize / 4;   // entries per indirect block
+    for (int lvl = 1; lvl <= 3 && remaining > 0; ++lvl) {
+        const int slot = 11 + lvl;               // i_block[12], [13], [14]
+        if (blocks[slot] != 0) {
+            ReadIndirectLevel(blocks[slot], lvl, result, remaining);
+            continue;
+        }
+        uint64_t capacity = 1;
+        for (int k = 0; k < lvl; ++k) capacity *= perBlock;
+        const uint64_t take = (std::min)(capacity,
+                                         static_cast<uint64_t>(remaining));
+        result.emplace_back(0, static_cast<uint32_t>(take));
+        remaining -= static_cast<uint32_t>(take);
+    }
 
     return result;
 }
@@ -273,12 +470,24 @@ void Ext4Parser::ReadIndirectLevel(uint64_t blockNum, int level,
     std::vector<uint8_t> buf(m_blockSize);
     if (!ReadBlock(blockNum, buf.data())) return;
 
-    uint32_t entriesPerBlock = m_blockSize / 4;  // 32-bit block numbers
+    const uint32_t entriesPerBlock = m_blockSize / 4;  // 32-bit block numbers
     const uint32_t* entries = reinterpret_cast<const uint32_t*>(buf.data());
+    // How many logical blocks one slot at this level covers.
+    uint64_t slotCapacity = 1;
+    for (int k = 0; k < level - 1; ++k) slotCapacity *= entriesPerBlock;
 
     for (uint32_t i = 0; i < entriesPerBlock && remaining > 0; ++i) {
-        uint32_t entry = entries[i];
-        if (entry == 0) continue;
+        const uint32_t entry = entries[i];
+        if (entry == 0) {
+            // Zero inside the file's logical range is a HOLE.  Consume the
+            // whole subtree worth of zero markers, otherwise the data blocks
+            // after the hole would shift forward in the recovered file.
+            const uint64_t take = (std::min)(slotCapacity,
+                                             static_cast<uint64_t>(remaining));
+            out.emplace_back(0, static_cast<uint32_t>(take));
+            remaining -= static_cast<uint32_t>(take);
+            continue;
+        }
 
         if (level == 1) {
             out.emplace_back(entry, 1);
@@ -525,6 +734,23 @@ void Ext4Parser::ScanDirectory(uint32_t inodeNum, const std::wstring& path,
     if (inode.i_links_count > 0) ++m_inUseCount;
     m_seenInodes.insert(inodeNum);
 
+    // ── inline_data directory ────────────────────────────────────────────
+    // The dirent array lives inside the inode: 4-byte parent inode, then the
+    // usual dirent stream.  It is never reachable through i_block[] pointers,
+    // so the block-map path below must not run for these inodes.
+    if (m_hasInlineData && (inode.i_flags & EXT4_INLINE_DATA_FL)) {
+        const uint64_t dirSize = inode.i_size_lo | ((uint64_t)inode.i_size_hi << 32);
+        std::vector<uint8_t> body;
+        if (!ReadInlineData(inodeNum, inode, dirSize, body) || body.size() <= 4) {
+            LOG_WARN(L"Ext4Parser: inline directory body unreadable for inode " +
+                     std::to_wstring(inodeNum));
+            return;
+        }
+        ParseDirBlock(body.data() + 4, static_cast<uint32_t>(body.size() - 4),
+                      inodeNum, path, cancelFlag);
+        return;
+    }
+
     const auto logicalBlocks = GetDirectoryLogicalBlocks(inode);
     if (logicalBlocks.empty())
         return;
@@ -580,6 +806,7 @@ void Ext4Parser::EmitDirEntry(uint32_t entryInode, uint8_t fileType, bool dentry
     node.originalPath = path + name;
     node.isDirectory  = isDir;
     node.parentId     = parentInode;
+    bool inlineBodyLost = false;
 
     if (gotInode) {
         node.size = childInode.i_size_lo | ((uint64_t)childInode.i_size_hi << 32);
@@ -594,16 +821,27 @@ void Ext4Parser::EmitDirEntry(uint32_t entryInode, uint8_t fileType, bool dentry
             ++m_inUseCount;
         }
 
-        if (!isDir && node.size > 0) {
-            std::vector<std::pair<uint64_t, uint32_t>> blocks;
-            if ((childInode.i_flags & EXT4_EXTENTS_FL) && m_hasExtents)
-                blocks = GetExtentBlocks(childInode);
-            else
-                blocks = GetIndirectBlocks(childInode);
+        if (!isDir && node.size > 0) {            if (m_hasInlineData && (childInode.i_flags & EXT4_INLINE_DATA_FL)) {
+                // inline_data: the body lives inside the inode (i_block[] plus
+                // the system.data ibody xattr).  Reading block pointers here
+                // would interpret payload bytes as addresses.
+                std::vector<uint8_t> body;
+                if (ReadInlineData(entryInode, childInode, node.size, body)) {
+                    node.residentData = body;
+                } else {
+                    inlineBodyLost = true;
+                    LOG_WARN(L"Ext4Parser: inline_data body incomplete for inode " +
+                             std::to_wstring(entryInode));
+                }
+            } else {
+                std::vector<std::pair<uint64_t, uint32_t>> blocks;
+                if ((childInode.i_flags & EXT4_EXTENTS_FL) && m_hasExtents)
+                    blocks = GetExtentBlocks(childInode);
+                else
+                    blocks = GetIndirectBlocks(childInode);
 
-            for (const auto& bc : blocks) {
-                for (uint32_t j = 0; j < bc.second; ++j)
-                    node.clusters.push_back(bc.first + j);
+                for (const auto& bc : blocks)
+                    AppendBlockRun(node.clusters, bc.first, bc.second);
             }
         }
     } else if (dentryDeleted) {
@@ -628,6 +866,9 @@ void Ext4Parser::EmitDirEntry(uint32_t entryInode, uint8_t fileType, bool dentry
     } else {
         node.recoverability = RecoverabilityLevel::Excellent;
     }
+    // An inline payload we could not fully assemble must never be advertised
+    // as recoverable: report it as lost instead of writing partial bytes.
+    if (inlineBodyLost) node.recoverability = RecoverabilityLevel::Lost;
 
     if (isDir) node.originalPath += L'\\';
 
@@ -779,14 +1020,21 @@ void Ext4Parser::ScanOrphanInodes(std::atomic<bool>* cancelFlag)
         node.recoverability = AssessRecoverability(ino);
 
         if (!node.isDirectory && node.size > 0) {
-            std::vector<std::pair<uint64_t, uint32_t>> blocks;
-            if ((inode.i_flags & EXT4_EXTENTS_FL) && m_hasExtents)
-                blocks = GetExtentBlocks(inode);
-            else
-                blocks = GetIndirectBlocks(inode);
-            for (const auto& bc : blocks) {
-                for (uint32_t j = 0; j < bc.second; ++j)
-                    node.clusters.push_back(bc.first + j);
+            if (m_hasInlineData && (inode.i_flags & EXT4_INLINE_DATA_FL)) {
+                std::vector<uint8_t> body;
+                if (ReadInlineData(ino, inode, node.size, body)) {
+                    node.residentData = body;
+                } else {
+                    node.recoverability = RecoverabilityLevel::Lost;
+                }
+            } else {
+                std::vector<std::pair<uint64_t, uint32_t>> blocks;
+                if ((inode.i_flags & EXT4_EXTENTS_FL) && m_hasExtents)
+                    blocks = GetExtentBlocks(inode);
+                else
+                    blocks = GetIndirectBlocks(inode);
+                for (const auto& bc : blocks)
+                    AppendBlockRun(node.clusters, bc.first, bc.second);
             }
         }
 

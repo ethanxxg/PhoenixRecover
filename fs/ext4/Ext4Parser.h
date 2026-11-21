@@ -32,6 +32,18 @@ public:
 private:
     // ── Inode reading ─────────────────────────────────────────────────────
     bool ReadInode(uint32_t inodeNum, EXT4_INODE& outInode);
+
+    // ── inline_data (EXT4_INLINE_DATA_FL) ─────────────────────────────────
+    // Small files/directories keep their body inside the inode: the first 60
+    // bytes live in i_block[], any remainder in the "system.data" in-inode
+    // xattr (ibody).  Returns false when the payload cannot be fully
+    // assembled, so callers never emit a silently truncated file.
+    bool ReadInodeRaw(uint32_t inodeNum, std::vector<uint8_t>& raw);
+    bool ReadInlineData(uint32_t inodeNum, const EXT4_INODE& inode,
+                        uint64_t size, std::vector<uint8_t>& out);
+    bool ParseInodeXattrData(const std::vector<uint8_t>& raw,
+                             const EXT4_INODE& inode, uint64_t wantBytes,
+                             std::vector<uint8_t>& out);
     
     // ── Block reading (handles 64-bit block addresses) ────────────────────
     bool ReadBlock(uint64_t blockNum, void* buffer);
@@ -41,7 +53,8 @@ private:
     // Returns list of (physical_block, block_count) for the inode's data
     std::vector<std::pair<uint64_t, uint32_t>> GetExtentBlocks(const EXT4_INODE& inode);
     void ParseExtentNode(const uint8_t* data, uint16_t depth,
-                         std::vector<std::pair<uint64_t, uint32_t>>& out);
+                         std::vector<std::pair<uint64_t, uint32_t>>& out,
+                         uint64_t& nextLogicalBlock);
 
     // ── Legacy block map (i_block[0..14]) ─────────────────────────────────
     std::vector<std::pair<uint64_t, uint32_t>> GetIndirectBlocks(const EXT4_INODE& inode);
@@ -97,7 +110,12 @@ private:
     bool     m_is64Bit      = false;
     bool     m_hasExtents   = false;
     bool     m_hasFiletype  = false;
+    bool     m_hasInlineData = false;
     uint32_t m_blockSize    = 1024;
+    // bigalloc: allocation unit is 1 << (s_log_cluster_size - s_log_block_size)
+    // blocks.  Extent ee_start / ee_len are expressed in CLUSTERS, so they must
+    // be scaled before a block-level read (m_clusterRatio == 1 otherwise).
+    uint32_t m_clusterRatio = 1;
     uint32_t m_inodeSize    = 128;
     uint32_t m_descSize     = 32;
     uint32_t m_groupCount   = 0;

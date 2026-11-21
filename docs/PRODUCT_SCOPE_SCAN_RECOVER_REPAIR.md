@@ -146,6 +146,8 @@
 | `VirtualDisk*` / `VirtualRaid` | 合成 fixture + `testdata/virtual-disk-golden/` 真实镜像金标（A1-1/A1-2/A1-4a） |
 | `BitLockerCrypto` / `BitLockerVolume` | FIPS 向量 + `testdata/bitlocker-golden/` 合成加密卷金标（A1-3a） |
 | `RefsCrypto` / `RefsVolume` | 标准 CRC / FIPS SHA-256 向量 + `testdata/refs-golden/` 合成 ReFS 卷金标（A1-5a，**非真实 Windows ReFS 卷**） |
+| `RefsParser` | `testdata/refs-golden/` 端到端字节门禁 CTest `RefsRecoverBytes`（A1-5b 接口接线：inline / extent / 嵌套目录共 6 条目逐文件 SHA-256 + 整镜像 FNV-1a；**合成卷，真实 ReFS 卷未验**） |
+| `Ext4Parser`（深度） | `tools/make_ext4_fixture.py` 独立生成器 5 变体金标 + CTest `Ext4DepthFeatures`（extents/间接块/slack 删除名/孤儿 inode、uninit extent、bigalloc、inline_data 文件与目录、depth=1 extent 树 + 稀疏洞，129 项） |
 | `RaidProbe` / `ScanSourceChain` | `testdata/raid-probe-golden/` 合成 mdadm 成员盘与组合链金标 + 既有 `bitlocker-golden/` / `refs-golden/` 期望表（A1-4b-a，**非真实阵列**） |
 | `SignatureMatcher` | `testdata/signature-matcher-golden/` 合成 64 KiB 镜像 + 独立 Python oracle 期望表（A1-6 / 并行轨：按类型恢复参数化引擎底座，**已接 `RawScan` 主路径**：`SignatureDB::ScanBatch` 流式 AC 批扫描替换线性 `memcmp`；A1-7 `DeepScan` 损坏 NTFS 回退 RAW 雕刻、A1-8 并行 RAW 扫描分块+合并均由对应 CTest 覆盖） |
 | `DeepScan` 损坏 NTFS/FAT 回退（A1-7） | 合成损坏 NTFS 镜像（合法 boot 扇区 + 垃圾 MFT + 植入 header-only magic）；CTest `DeepScanFallback` 正向：识别 FS 但结构化解析 < 8 文件时回退 `RawScan` RAW 雕刻并恢复植入 magic；反向：无 FS 识别时零恢复（回退门控正确） |
@@ -250,7 +252,7 @@
 | 指标 | EaseUS（官方） | PhoenixRecover（实测/代码） | 差距 |
 |------|----------------|----------------------------|------|
 | 宣传文件类型数 | **1000+** | **514** 签名条目；**~309** 不重复扩展名（雕刻）；**321** UI 筛选扩展名 | 🔴 数量约为 1/3（条目级）；勿对外写「1000+」 |
-| 文件系统 | NTFS、FAT、exFAT、ext2/3、**HFS+**、**ReFS** 等 | NTFS、FAT、exFAT、**ext4**；**无** HFS+ / ReFS / APFS | 🔴 Mac/部分服务器卷 |
+| 文件系统 | NTFS、FAT、exFAT、ext2/3、**HFS+**、**ReFS** 等 | NTFS、FAT、exFAT、**ext4**、**ReFS（只读解析+恢复，合成金标）**；**无** HFS+ / APFS | 🔴 Mac/部分服务器卷 |
 | 自定义签名 | 不明 | `testdata/custom_signatures.json` + `SIGNATURE_FORMAT.md`；`LoadFromFile` Qt 解耦（零依赖 `scan/SignatureJson.h`），CTest `SignatureDBLoad` 90 项验证（字段/严格 JSON 拒绝/恶意 hex 跳过/AC 重建/真实样例） | 🟢 可扩展，headless 可用 |
 | UI↔签名一致性 | — | CTest `UiTypeCoverage` 强制 321 扩展名有覆盖规则 | 🟢 |
 
@@ -300,7 +302,7 @@ EaseUS 另售 **Video Repair / Photo Repair** 产品线；我方修复器在主�
 | **rar / 7z** | 扫描+解压类恢复 | UI 树有 **rar、7z**；修复 **无** | P1 扫描误报率 |
 | **pst / ost** | 邮件恢复卖点 | 树上有；**无专用解析/预览** | P2 |
 | **ai / sketch / fig** 等设计稿 | 部分支持 | 树含 **ai** 等；依赖签名质量 | P2 |
-| **ReFS / HFS+ / APFS** 卷 | 支持 | **不支持** | P2（非 Windows 主线可延后） |
+| **ReFS / HFS+ / APFS** 卷 | 支持 | **ReFS 只读解析+恢复已接生产探测链**（`RefsParser`，CTest `RefsRecoverBytes` 80 项，合成金标含嵌套目录）；HFS+ / APFS **不支持**；真实 Windows ReFS 卷未验 | 🟡 ReFS 合成已通，真实卷待验；HFS+/APFS P2 |
 
 ### 6.7 如何复现统计（避免文档与代码漂移）
 

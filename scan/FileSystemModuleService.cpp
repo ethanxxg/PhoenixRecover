@@ -8,6 +8,7 @@
 #include "../fs/exfat/ExfatParser.h"
 #include "../fs/fat/FatParser.h"
 #include "../fs/ntfs/NtfsParser.h"
+#include "../fs/refs/RefsParser.h"
 #endif
 #include "ScanEngine.h"
 
@@ -23,6 +24,8 @@ std::unique_ptr<FileSystem> CreateParser(const std::wstring& fsType)
         return std::make_unique<FatParser>();
     case FsModuleId::Exfat:
         return std::make_unique<ExfatParser>();
+    case FsModuleId::Refs:
+        return std::make_unique<RefsParser>();
 #endif
     case FsModuleId::Ext4:
         return std::make_unique<Ext4Parser>();
@@ -61,6 +64,14 @@ std::unique_ptr<FileSystem> CreateParserForPartition(SectorReader& reader,
     auto exfat = std::make_unique<ExfatParser>();
     if (exfat->Open(reader, partition)) {
         return std::move(exfat);
+    }
+
+    // ReFS before FAT: the ReFS VBR carries an NTFS-like BPB, so a FAT probe
+    // on a wiped or half-valid ReFS volume could otherwise claim it.  The ReFS
+    // engine validates VBR checksum + SUPB/CHKP copies, which FAT does not.
+    auto refs = std::make_unique<RefsParser>();
+    if (refs->Open(reader, partition)) {
+        return std::move(refs);
     }
 
     auto fat = std::make_unique<FatParser>();

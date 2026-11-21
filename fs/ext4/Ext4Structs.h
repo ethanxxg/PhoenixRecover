@@ -126,6 +126,14 @@ constexpr uint32_t EXT4_FEATURE_INCOMPAT_FILETYPE   = 0x0002;
 constexpr uint32_t EXT4_FEATURE_INCOMPAT_EXTENTS    = 0x0040;
 constexpr uint32_t EXT4_FEATURE_INCOMPAT_64BIT      = 0x0080;
 constexpr uint32_t EXT4_FEATURE_INCOMPAT_FLEX_BG    = 0x0200;
+constexpr uint32_t EXT4_FEATURE_INCOMPAT_INLINE_DATA = 0x8000;
+constexpr uint32_t EXT4_FEATURE_RO_COMPAT_BIGALLOC  = 0x0200;
+
+// ── inline_data / in-inode xattr (ibody) ────────────────────────────────────
+constexpr uint32_t EXT4_INLINE_DATA_FL      = 0x10000000;
+constexpr uint32_t EXT4_XATTR_IBODY_MAGIC   = 0xEA020000;
+constexpr uint8_t  EXT4_XATTR_INDEX_SYSTEM  = 7;   // "system.data"
+constexpr uint8_t  EXT4_INLINE_DATA_HEAD    = 60;  // bytes carried by i_block[]
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Block Group Descriptor (32 or 64 bytes)

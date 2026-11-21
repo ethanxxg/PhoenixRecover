@@ -520,6 +520,7 @@ if(PHOENIX_SECTOR_READER)
         ${CMAKE_SOURCE_DIR}/disk/PartitionProbe.cpp
         ${CMAKE_SOURCE_DIR}/disk/PartitionRecoveryService.cpp
         ${CMAKE_SOURCE_DIR}/scan/FileSystemModuleService.cpp
+        ${CMAKE_SOURCE_DIR}/fs/refs/RefsParser.cpp
     )
     phoenix_add_test(test_cfreds_ext4)
     target_compile_definitions(test_cfreds_ext4 PRIVATE
@@ -542,6 +543,7 @@ if(PHOENIX_SECTOR_READER)
         ${CMAKE_SOURCE_DIR}/fs/ntfs/UsnJournalParser.cpp
         ${CMAKE_SOURCE_DIR}/fs/ext4/Ext4Parser.cpp
         ${CMAKE_SOURCE_DIR}/scan/FileSystemModuleService.cpp
+        ${CMAKE_SOURCE_DIR}/fs/refs/RefsParser.cpp
     )
     phoenix_add_test(test_exfat_probe_dispatch)
     target_compile_definitions(test_exfat_probe_dispatch PRIVATE
@@ -565,6 +567,7 @@ if(PHOENIX_SECTOR_READER)
         ${CMAKE_SOURCE_DIR}/fs/ntfs/UsnJournalParser.cpp
         ${CMAKE_SOURCE_DIR}/fs/ext4/Ext4Parser.cpp
         ${CMAKE_SOURCE_DIR}/scan/FileSystemModuleService.cpp
+        ${CMAKE_SOURCE_DIR}/fs/refs/RefsParser.cpp
         ${CMAKE_SOURCE_DIR}/recover/RecoverEngine.cpp
         ${CMAKE_SOURCE_DIR}/recover/RecoverOutputFile.cpp
         ${CMAKE_SOURCE_DIR}/recover/RecoverTargetPath.cpp
@@ -600,6 +603,112 @@ if(PHOENIX_SECTOR_READER)
     endif()
     add_test(NAME Ext2Ext3LegacyGolden COMMAND test_ext2_ext3_legacy_golden)
 
+    # --- ext4 depth: extents / inline_data / bigalloc / uninit extent --------
+    # Fixtures come from tools/make_ext4_fixture.py, an independent oracle that
+    # writes the on-disk structures itself.  Generated at build time into the
+    # build tree when a Python 3 interpreter is available; otherwise the test
+    # falls back to testdata/ext4-synthetic (run the script manually).
+    set(EXT4_FIXTURE_DIR ${CMAKE_BINARY_DIR}/ext4-fixtures)
+    find_program(PHOENIX_PY_EXE NAMES python3 python)
+    if(PHOENIX_PY_EXE)
+        set(PHOENIX_PY_CMD ${PHOENIX_PY_EXE})
+    else()
+        find_program(PHOENIX_PY_LAUNCHER NAMES py)
+        if(PHOENIX_PY_LAUNCHER)
+            set(PHOENIX_PY_CMD ${PHOENIX_PY_LAUNCHER} -3)
+        endif()
+    endif()
+
+    set(EXT4_FIXTURE_OUTPUTS
+        ${EXT4_FIXTURE_DIR}/ext4-base.img
+        ${EXT4_FIXTURE_DIR}/ext4-uninit.img
+        ${EXT4_FIXTURE_DIR}/ext4-bigalloc.img
+        ${EXT4_FIXTURE_DIR}/ext4-inline.img
+        ${EXT4_FIXTURE_DIR}/ext4-sparse.img
+    )
+    if(PHOENIX_PY_CMD)
+        add_custom_command(
+            OUTPUT ${EXT4_FIXTURE_OUTPUTS}
+            COMMAND ${CMAKE_COMMAND} -E make_directory ${EXT4_FIXTURE_DIR}
+            COMMAND ${PHOENIX_PY_CMD} ${CMAKE_SOURCE_DIR}/tools/make_ext4_fixture.py
+                    --out ${EXT4_FIXTURE_DIR}
+            DEPENDS ${CMAKE_SOURCE_DIR}/tools/make_ext4_fixture.py
+            COMMENT "Generating synthetic ext4 fixtures (independent oracle)"
+            VERBATIM)
+        add_custom_target(ext4_fixtures DEPENDS ${EXT4_FIXTURE_OUTPUTS})
+        set(EXT4_FIXTURE_DEF
+            PHOENIX_EXT4_FIXTURE_DIR=L"${EXT4_FIXTURE_DIR}")
+    else()
+        set(EXT4_FIXTURE_DEF
+            PHOENIX_EXT4_FIXTURE_DIR=L"${CMAKE_SOURCE_DIR}/testdata/ext4-synthetic")
+    endif()
+
+    add_executable(test_ext4_depth_features
+        test_ext4_depth_features.cpp
+        ${INTEGRATION_COMMON_SOURCES}
+        ${CMAKE_SOURCE_DIR}/fs/exfat/ExfatParser.cpp
+        ${CMAKE_SOURCE_DIR}/fs/fat/FatParser.cpp
+        ${CMAKE_SOURCE_DIR}/fs/fat/FatStructs.cpp
+        ${CMAKE_SOURCE_DIR}/fs/ntfs/NtfsParser.cpp
+        ${CMAKE_SOURCE_DIR}/fs/ntfs/UsnJournalParser.cpp
+        ${CMAKE_SOURCE_DIR}/fs/ext4/Ext4Parser.cpp
+        ${CMAKE_SOURCE_DIR}/fs/refs/RefsParser.cpp
+        ${CMAKE_SOURCE_DIR}/scan/FileSystemModuleService.cpp
+        ${CMAKE_SOURCE_DIR}/recover/RecoverEngine.cpp
+        ${CMAKE_SOURCE_DIR}/recover/RecoverOutputFile.cpp
+        ${CMAKE_SOURCE_DIR}/recover/RecoverTargetPath.cpp
+    )
+    phoenix_add_test(test_ext4_depth_features)
+    target_compile_definitions(test_ext4_depth_features PRIVATE
+        PHOENIX_SOURCE_DIR=L"${CMAKE_SOURCE_DIR}"
+        ${EXT4_FIXTURE_DEF}
+    )
+    if(PHOENIX_PLATFORM_LIBS)
+        target_link_libraries(test_ext4_depth_features PRIVATE ${PHOENIX_PLATFORM_LIBS})
+    endif()
+    if(TARGET ext4_fixtures)
+        add_dependencies(test_ext4_depth_features ext4_fixtures)
+    endif()
+    add_test(NAME Ext4DepthFeatures COMMAND test_ext4_depth_features)
+
+    # --- ReFS depth: nested tree + inline + extent recovery bytes -----------
+    # Golden corpus testdata/refs-golden (A1-5a, independent pure-Python
+    # oracle).  Drives the production probe chain (empty fsType) so the ReFS
+    # detector itself is gated, then verifies every entry's SHA-256 through
+    # RecoverEngine.  Locks two defects found while wiring the product path:
+    #   * ReFS VBR geometry lives at +0x20/+0x24, not the NTFS BPB at 11/13
+    #     (reading 11/13 returned 0 and degraded every extent to one sector)
+    #   * directory entries do not carry a child object id, so the tree must be
+    #     rebuilt from the parent-child table (nested subdir was lost)
+    add_executable(test_refs_recover_bytes
+        test_refs_recover_bytes.cpp
+        ${INTEGRATION_COMMON_SOURCES}
+        ${CMAKE_SOURCE_DIR}/fs/refs/RefsParser.cpp
+        ${CMAKE_SOURCE_DIR}/fs/exfat/ExfatParser.cpp
+        ${CMAKE_SOURCE_DIR}/fs/fat/FatParser.cpp
+        ${CMAKE_SOURCE_DIR}/fs/fat/FatStructs.cpp
+        ${CMAKE_SOURCE_DIR}/fs/ntfs/NtfsParser.cpp
+        ${CMAKE_SOURCE_DIR}/fs/ntfs/UsnJournalParser.cpp
+        ${CMAKE_SOURCE_DIR}/fs/ext4/Ext4Parser.cpp
+        ${CMAKE_SOURCE_DIR}/scan/FileSystemModuleService.cpp
+        ${CMAKE_SOURCE_DIR}/fs/refs/RefsParser.cpp
+        ${CMAKE_SOURCE_DIR}/scan/SignatureDB.cpp
+        ${CMAKE_SOURCE_DIR}/scan/UiTypeSignatureSupplement.cpp
+        ${CMAKE_SOURCE_DIR}/recover/RecoverEngine.cpp
+        ${CMAKE_SOURCE_DIR}/recover/RecoverOutputFile.cpp
+        ${CMAKE_SOURCE_DIR}/recover/RecoverTargetPath.cpp
+        ${CMAKE_SOURCE_DIR}/recover/RecoverTargetValidation.cpp
+    )
+    phoenix_add_test(test_refs_recover_bytes)
+    target_compile_definitions(test_refs_recover_bytes PRIVATE
+        PHOENIX_SOURCE_DIR=L"${CMAKE_SOURCE_DIR}"
+    )
+    if(PHOENIX_PLATFORM_LIBS)
+        target_link_libraries(test_refs_recover_bytes PRIVATE ${PHOENIX_PLATFORM_LIBS})
+    endif()
+    add_test(NAME RefsRecoverBytes COMMAND test_refs_recover_bytes)
+
+
     # W7: multi-cluster / FAT-misleading exFAT recovery-byte gate.  Real DFR
     # images dfr-02/03/05/12; dfr-12's FAT entries point at unrelated clusters,
     # so following FAT instead of the NoFatChain rule produces wrong bytes.
@@ -613,6 +722,7 @@ if(PHOENIX_SECTOR_READER)
         ${CMAKE_SOURCE_DIR}/fs/ntfs/UsnJournalParser.cpp
         ${CMAKE_SOURCE_DIR}/fs/ext4/Ext4Parser.cpp
         ${CMAKE_SOURCE_DIR}/scan/FileSystemModuleService.cpp
+        ${CMAKE_SOURCE_DIR}/fs/refs/RefsParser.cpp
         ${CMAKE_SOURCE_DIR}/recover/RecoverEngine.cpp
         ${CMAKE_SOURCE_DIR}/recover/RecoverOutputFile.cpp
         ${CMAKE_SOURCE_DIR}/recover/RecoverTargetPath.cpp
@@ -1315,6 +1425,7 @@ if(PHOENIX_SECTOR_READER)
             ${CMAKE_SOURCE_DIR}/disk/PartitionRecoveryService.cpp
             ${CMAKE_SOURCE_DIR}/fs/ext4/Ext4Parser.cpp
             ${CMAKE_SOURCE_DIR}/scan/FileSystemModuleService.cpp
+            ${CMAKE_SOURCE_DIR}/fs/refs/RefsParser.cpp
             ${CMAKE_SOURCE_DIR}/recover/RecoverEngine.cpp
             ${CMAKE_SOURCE_DIR}/recover/RecoverOutputFile.cpp
             ${CMAKE_SOURCE_DIR}/recover/RecoverTargetPath.cpp

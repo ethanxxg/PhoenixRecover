@@ -20,6 +20,7 @@ enum class FsModuleId {
     Fat,
     Exfat,
     Ext4,
+    Refs,
     Unknown,
 };
 
@@ -43,6 +44,9 @@ inline FsModuleId ClassifyFsType(const std::wstring& fsType)
     }
     if (EqualsFsType(fsType, L"exFAT")) {
         return FsModuleId::Exfat;
+    }
+    if (EqualsFsType(fsType, L"ReFS")) {
+        return FsModuleId::Refs;
     }
     if (EqualsFsType(fsType, L"ext4") || EqualsFsType(fsType, L"ext3") ||
         EqualsFsType(fsType, L"ext2") || EqualsFsType(fsType, L"EXT4") ||

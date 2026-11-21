@@ -389,6 +389,18 @@ public:
         return m_parentChild;
     }
 
+    // Every OID that has an object-table root page.  Callers that need to walk
+    // the whole tree use this instead of trusting directory entries to carry a
+    // usable child identity (see the kf=0x02 ordinal note below).
+    std::vector<uint64_t> ObjectIds() const
+    {
+        std::vector<uint64_t> ids;
+        ids.reserve(m_objectRoots.size());
+        for (const auto& kv : m_objectRoots) ids.push_back(kv.first);
+        std::sort(ids.begin(), ids.end());
+        return ids;
+    }
+
     // Resolve a virtual LCN to a physical LCN through the Container Table.
     bool TranslateVlcn(uint64_t vlcn, uint64_t& plcn) const
     {

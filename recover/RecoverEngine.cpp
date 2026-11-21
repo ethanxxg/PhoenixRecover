@@ -103,6 +103,11 @@ struct FsVolumeHints {
     bool     isNtfs = false;
     bool     isExt4 = false;
     bool     isExfat = false;
+    bool     isRefs = false;
+
+    // NTFS and ReFS both store volume-relative cluster numbers; FAT/exFAT store
+    // absolute sector numbers.  Keep that distinction explicit.
+    bool IsClusterRelative() const { return isNtfs || isRefs; }
     uint32_t bytesPerCluster = 0;
     uint32_t ext4BlockSize   = 0;
 };
@@ -115,6 +120,22 @@ static FsVolumeHints ParseFsVolumeHints(const uint8_t* bootBuf, uint32_t ss)
         const uint16_t bps = Utils::ReadLE16(bootBuf + 11);
         const uint8_t  spc = bootBuf[13];
         h.bytesPerCluster = static_cast<uint32_t>(bps) * spc;
+        return h;
+    }
+    // ReFS looks like NTFS at offset 3 but its VBR is NOT a BPB: the OEM field
+    // is "ReFS\0\0\0\0", +0x10 holds the "FSRS" signature, +0x14 is a fixed
+    // 0x0200 marker, and the real geometry lives at +0x20 (u32 bytesPerSector)
+    // and +0x24 (u32 sectorsPerCluster).  Reading offset 11/13 here yields zero
+    // and silently degrades every extent to one sector.
+    if (memcmp(bootBuf + 3, "ReFS\0\0\0\0", 8) == 0 &&
+        memcmp(bootBuf + 0x10, "FSRS", 4) == 0) {
+        h.isRefs = true;
+        const uint32_t bps = Utils::ReadLE32(bootBuf + 0x20);
+        const uint32_t spc = Utils::ReadLE32(bootBuf + 0x24);
+        if (bps > 0 && spc > 0 && bps <= 65536 && spc <= 256)
+            h.bytesPerCluster = bps * spc;
+        if (h.bytesPerCluster == 0)
+            h.bytesPerCluster = ss;
         return h;
     }
     if (memcmp(bootBuf + 3, "EXFAT   ", 8) == 0) {
@@ -254,7 +275,7 @@ bool RecoverEngine::TryPreviewSingleReadSlice(SectorReader& reader,
 
     const FsVolumeHints hints = ParseFsVolumeHints(bootBuf, ss);
 
-    if (hints.isNtfs && hints.bytesPerCluster > 0) {
+    if (hints.IsClusterRelative() && hints.bytesPerCluster > 0) {
         const uint64_t firstLcn = node.clusters[0];
         uint64_t runBytes = 0;
         uint64_t expected = firstLcn;
@@ -484,7 +505,7 @@ bool RecoverEngine::ReadFileDataPrefix(SectorReader&          reader,
         uint64_t readBytes;
         uint64_t readOffset;
 
-        if (hints.isNtfs && hints.bytesPerCluster > 0) {
+        if (hints.IsClusterRelative() && hints.bytesPerCluster > 0) {
             if (entry == 0) {
                 const uint64_t toWrite = std::min(static_cast<uint64_t>(hints.bytesPerCluster),
                                                     byteLimit - written64);
@@ -723,8 +744,8 @@ bool RecoverEngine::WriteRecoveredFile(const std::wstring& targetPath,
             uint64_t readBytes;
             uint64_t readOffset;
 
-            if (hints.isNtfs && hints.bytesPerCluster > 0) {
-                // NTFS: entry is an LCN; LCN=0 means sparse cluster → zero-fill
+            if (hints.IsClusterRelative() && hints.bytesPerCluster > 0) {
+                // NTFS / ReFS: entry is a volume-relative cluster; 0 = sparse
                 if (entry == 0) {
                     uint64_t toWrite = std::min(
                         static_cast<uint64_t>(hints.bytesPerCluster), node.size - written64);
@@ -768,7 +789,7 @@ bool RecoverEngine::WriteRecoveredFile(const std::wstring& targetPath,
         }
 
         // FAT/exFAT: directory size may exceed recoverable chain by <= one cluster.
-        if (written64 < node.size && !hints.isNtfs && !hints.isExt4) {
+        if (written64 < node.size && !hints.IsClusterRelative() && !hints.isExt4) {
             const uint64_t clusterBytes = hints.bytesPerCluster > 0
                                               ? hints.bytesPerCluster
                                               : static_cast<uint64_t>(ss);
