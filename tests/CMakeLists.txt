@@ -521,6 +521,9 @@ if(PHOENIX_SECTOR_READER)
         ${CMAKE_SOURCE_DIR}/disk/PartitionRecoveryService.cpp
         ${CMAKE_SOURCE_DIR}/scan/FileSystemModuleService.cpp
         ${CMAKE_SOURCE_DIR}/fs/refs/RefsParser.cpp
+        ${CMAKE_SOURCE_DIR}/recover/RecoverEngine.cpp
+        ${CMAKE_SOURCE_DIR}/recover/RecoverOutputFile.cpp
+        ${CMAKE_SOURCE_DIR}/recover/RecoverTargetPath.cpp
     )
     phoenix_add_test(test_cfreds_ext4)
     target_compile_definitions(test_cfreds_ext4 PRIVATE
