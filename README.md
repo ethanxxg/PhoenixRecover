@@ -123,6 +123,15 @@ powershell -ExecutionPolicy Bypass -File "scripts/Regress.ps1" -QtPrefix "C:\Qt\
 
 ---
 
+## 测试数据
+
+仓库**不包含**测试语料与磁盘镜像（`testdata/` 约 163 GiB：CFReDS DFR、DFTT、
+Digital Corpora、Sleuth Kit、NapierOne 等）。请按
+[docs/TESTDATA.md](docs/TESTDATA.md) 自行下载到 `testdata/` 目录后运行集成测试；
+缺少镜像时相关 CTest 记为 `NEEDS_EWF` 跳过而非失败。
+
+---
+
 ## 许可证
 
 本项目采用 [MIT 许可证](LICENSE) 发布。
