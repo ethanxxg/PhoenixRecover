@@ -1,0 +1,33 @@
+dataset,rel_path,format,size_bytes,open_ok,read_ok,fs_type,file_count,active_count,deleted_count,recoverable,recover_ok,recover_failed,recover_skipped,result,duration_sec,notes
+circl-2023-wiped,circl-2023-wiped\wiped_disk.dd,.dd,281693650944,yes,yes,,0,0,0,0,0,0,0,SMOKE_ONLY,0.000,image>50GiB; recovery not attempted
+nps-2009-canon2,nps-2009-canon2\nps-2009-canon2-gen1.dd,.dd,31129600,yes,yes,FAT12,39,37,0,36,36,0,0,RECOVER_FULL,0.146,all recoverable files written with matching size
+nps-2009-canon2,nps-2009-canon2\nps-2009-canon2-gen2.dd,.dd,31129600,yes,yes,FAT12,41,35,3,37,37,0,0,RECOVER_FULL,0.143,all recoverable files written with matching size
+nps-2009-canon2,nps-2009-canon2\nps-2009-canon2-gen3.dd,.dd,31129600,yes,yes,FAT12,41,34,4,37,36,1,0,RECOVER_PARTIAL,0.144,ok=36/37 failed=1 skipped=0
+nps-2009-canon2,nps-2009-canon2\nps-2009-canon2-gen4.dd,.dd,31129600,yes,yes,FAT12,41,32,6,37,36,1,0,RECOVER_PARTIAL,0.144,ok=36/37 failed=1 skipped=0
+nps-2009-canon2,nps-2009-canon2\nps-2009-canon2-gen5.dd,.dd,31129600,yes,yes,FAT12,41,28,10,37,36,1,0,RECOVER_PARTIAL,0.147,ok=36/37 failed=1 skipped=0
+nps-2009-canon2,nps-2009-canon2\nps-2009-canon2-gen6.dd,.dd,31129600,yes,yes,FAT12,41,35,3,37,37,0,0,RECOVER_FULL,0.139,all recoverable files written with matching size
+nps-2009-casper-rw,nps-2009-casper-rw\ubnist1.casper-rw.gen0.dd,.dd,54525952,yes,yes,ext4,1,0,0,0,0,0,0,SCAN_OK,0.111,"fs scanned, no recoverable files"
+nps-2009-casper-rw,nps-2009-casper-rw\ubnist1.casper-rw.gen1.dd,.dd,629145600,yes,yes,ext4,626,391,7,348,274,74,0,RECOVER_PARTIAL,0.565,ok=274/348 failed=74 skipped=0
+nps-2009-casper-rw,nps-2009-casper-rw\ubnist1.casper-rw.gen2.dd,.dd,629145600,yes,yes,ext4,1211,807,23,726,650,76,0,RECOVER_PARTIAL,1.284,ok=650/726 failed=76 skipped=0
+nps-2009-casper-rw,nps-2009-casper-rw\ubnist1.casper-rw.gen3.dd,.dd,629145600,yes,yes,ext4,1511,1091,34,1010,935,75,0,RECOVER_PARTIAL,1.724,ok=935/1010 failed=75 skipped=0
+nps-2009-domexusers,nps-2009-domexusers\nps-2009-domexusers.dd,.dd,42949672960,yes,yes,NTFS,36821,34217,85,34135,34124,11,0,RECOVER_PARTIAL,110.094,ok=34124/34135 failed=11 skipped=0
+nps-2009-ntfs1,nps-2009-ntfs1\ntfs1-gen0.dd,.dd,516554752,yes,yes,NTFS,8,3,0,0,0,0,0,SCAN_OK,0.000,"fs scanned, no recoverable files"
+nps-2009-ntfs1,nps-2009-ntfs1\ntfs1-gen1.dd,.dd,516554752,yes,yes,NTFS,19,15,0,12,12,0,0,RECOVER_FULL,0.197,all recoverable files written with matching size
+nps-2009-ntfs1,nps-2009-ntfs1\ntfs1-gen2.dd,.dd,516554752,yes,yes,NTFS,26,22,0,16,16,0,0,RECOVER_FULL,0.182,all recoverable files written with matching size
+nps-2009-ubnist1,nps-2009-ubnist1\ubnist1.gen0.dd,.dd,2106589184,yes,yes,FAT32,211,159,1,158,158,0,0,RECOVER_FULL,8.567,all recoverable files written with matching size
+nps-2009-ubnist1,nps-2009-ubnist1\ubnist1.gen1.dd,.dd,2106589184,yes,yes,FAT32,211,159,1,158,158,0,0,RECOVER_FULL,2.547,all recoverable files written with matching size
+nps-2009-ubnist1,nps-2009-ubnist1\ubnist1.gen3.raw,.raw,1106798893,yes,yes,FAT32,211,159,1,158,158,0,0,RECOVER_FULL,3.350,all recoverable files written with matching size
+nps-2010-emails,nps-2010-emails\nps-2010-emails.dd,.dd,10485760,yes,yes,FAT16,38,33,1,32,30,2,0,RECOVER_PARTIAL,0.069,ok=30/32 failed=2 skipped=0
+nps-2014-usb-nondeterministic,nps-2014-usb-nondeterministic\linux-dc3dd-first.dd,.dd,1009778688,yes,yes,,0,0,0,0,0,0,0,SMOKE_ONLY,0.004,no supported FS; sector0=unknown
+nps-2009-domexusers,nps-2009-domexusers\nps-2009-domexusers.redacted.E01,.E01,2147474145,,,,0,0,0,0,0,0,0,NEEDS_EWF,0.000,E01 present; run Expand-EwfToRaw.ps1 for .dd
+nps-2009-ubnist1,nps-2009-ubnist1\ubnist1.gen2.E01,.E01,215559690,,,,0,0,0,0,0,0,0,NEEDS_EWF,0.000,E01 present; run Expand-EwfToRaw.ps1 for .dd
+nps-2014-usb-nondeterministic,nps-2014-usb-nondeterministic\linux-dc3dd-second.E01,.E01,10124960,,,,0,0,0,0,0,0,0,NEEDS_EWF,0.000,E01 present; run Expand-EwfToRaw.ps1 for .dd
+nps-2014-usb-nondeterministic,nps-2014-usb-nondeterministic\windows-ftkimager-first.E01,.E01,10625491,,,,0,0,0,0,0,0,0,NEEDS_EWF,0.000,E01 present; run Expand-EwfToRaw.ps1 for .dd
+nps-2014-usb-nondeterministic,nps-2014-usb-nondeterministic\windows-ftkimager-second.E01,.E01,10506818,,,,0,0,0,0,0,0,0,NEEDS_EWF,0.000,E01 present; run Expand-EwfToRaw.ps1 for .dd
+nps-2009-hfsjtest1,nps-2009-hfsjtest1\image.gen0.dmg,.dmg,10485760,,,,0,0,0,0,0,0,0,UNSUPPORTED,0.000,SectorReader raw-only; convert or use AFF/EWF tools
+nps-2009-hfsjtest1,nps-2009-hfsjtest1\image.gen1.dmg,.dmg,10485760,,,,0,0,0,0,0,0,0,UNSUPPORTED,0.000,SectorReader raw-only; convert or use AFF/EWF tools
+nps-2009-ntfs1,nps-2009-ntfs1\ntfs1-gen0.aff,.aff,277228,,,,0,0,0,0,0,0,0,UNSUPPORTED,0.000,SectorReader raw-only; convert or use AFF/EWF tools
+nps-2009-ntfs1,nps-2009-ntfs1\ntfs1-gen1.aff,.aff,8481452,,,,0,0,0,0,0,0,0,UNSUPPORTED,0.000,SectorReader raw-only; convert or use AFF/EWF tools
+nps-2009-ubnist1,nps-2009-ubnist1\ubnist1.gen0.aff,.aff,725408916,,,,0,0,0,0,0,0,0,UNSUPPORTED,0.000,SectorReader raw-only; convert or use AFF/EWF tools
+nps-2009-ubnist1,nps-2009-ubnist1\ubnist1.gen3.001,.001,536870912,,,,0,0,0,0,0,0,0,UNSUPPORTED,0.000,SectorReader raw-only; convert or use AFF/EWF tools
+nps-2009-ubnist1,nps-2009-ubnist1\ubnist1.gen3.aff,.aff,890164681,,,,0,0,0,0,0,0,0,UNSUPPORTED,0.000,SectorReader raw-only; convert or use AFF/EWF tools

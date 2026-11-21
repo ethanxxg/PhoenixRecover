@@ -1,0 +1,50 @@
+19:14:59 cp=[1, 2, 3, 4, 5] fin=waiting latest=batch_006_engine_result.csv@18:53:54 engine-recovering
+19:17:59 cp=[1, 2, 3, 4, 5] fin=waiting latest=batch_006_engine_result.csv@18:53:54 engine-recovering
+19:20:59 cp=[1, 2, 3, 4, 5] fin=waiting latest=batch_006_engine_result.csv@18:53:54 engine-recovering
+19:22:59 cp=[1, 2, 3, 4, 5] fin=waiting latest=batch_006_engine_result.csv@18:53:54 engine-recovering
+19:25:59 cp=[1, 2, 3, 4, 5] fin=waiting latest=batch_006.json@19:25:04 record-written
+19:28:59 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_ids.txt@19:27:36 engine-recovering
+19:30:47 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_006_engine_plan_verification.json@19:30:24 engine-recovering
+19:33:47 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_006_engine_plan_verification.json@19:30:24 engine-recovering
+19:36:47 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_006_engine_plan_verification.json@19:30:24 engine-recovering
+19:37:04 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_006_engine_plan_verification.json@19:30:24 engine-recovering
+19:41:51 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_006_engine_plan_verification.json@19:30:24 engine-recovering
+19:42:07 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_006_engine_plan_verification.json@19:30:24 engine-recovering
+19:45:17 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_006_engine_plan_verification.json@19:30:24 engine-recovering
+19:48:27 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_006_engine_plan_verification.json@19:30:24 engine-recovering
+19:48:37 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_006_engine_plan_verification.json@19:30:24 engine-recovering
+19:51:47 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_006_engine_plan_verification.json@19:30:24 engine-recovering
+19:54:59 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_006_engine_plan_verification.json@19:30:24 engine-recovering
+19:55:41 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_006_engine_plan_verification.json@19:30:24 engine-recovering
+19:58:51 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:02:01 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:02:10 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:05:20 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:08:30 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:08:43 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:11:53 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:15:03 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:15:16 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:18:26 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:21:36 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:21:45 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:24:55 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:28:05 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:28:15 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:31:25 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:34:35 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:34:43 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_engine_result.csv@19:56:19 engine-recovering
+20:37:53 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_hashes.csv@20:37:53 engine-recovering
+20:41:03 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_hashes.csv@20:41:03 engine-recovering
+20:41:13 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_hashes.csv@20:41:13 engine-recovering
+20:44:23 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007_hashes.csv@20:44:23 engine-recovering
+20:47:33 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007.json@20:46:08 record-written
+20:48:40 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007.json@20:46:08 record-written
+20:51:50 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007.json@20:46:08 record-written
+20:55:00 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007.json@20:46:08 record-written
+20:57:37 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007.json@20:46:08 record-written
+21:00:47 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007.json@20:46:08 record-written
+21:03:57 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007.json@20:46:08 record-written
+21:04:19 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007.json@20:46:08 record-written
+21:07:29 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007.json@20:46:08 record-written
+21:10:39 cp=[1, 2, 3, 4, 5, 6] fin=waiting latest=batch_007.json@20:46:08 record-written

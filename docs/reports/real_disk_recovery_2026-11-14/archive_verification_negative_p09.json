@@ -1,0 +1,212 @@
+{
+  "conclusion": "ARCHIVE VERIFICATION FAILED",
+  "strictMode": false,
+  "batchesCompleted": 5,
+  "batchesPlanned": 7,
+  "checkpoint": {
+    "completed": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "totals": {
+      "files": 363893,
+      "bytes": 95265822417,
+      "matched": 363893,
+      "mismatched": 22,
+      "failed": 1288
+    }
+  },
+  "zeroWrite": {
+    "baselineSamples": 7,
+    "baselineReadFailures": 0,
+    "verifiedAtUtc": "2026-11-14T09:46:20.244190Z",
+    "result": {
+      "identityUnchanged": true,
+      "samplesCompared": 7,
+      "changed": [],
+      "conclusion": "SOURCE DISK UNCHANGED"
+    }
+  },
+  "batches": [
+    {
+      "batch": 1,
+      "inCheckpoint": true,
+      "volumeBootLBA": 63,
+      "plannedFiles": 9233,
+      "plannedBytes": 25061394540,
+      "stats": {
+        "requested": 9233,
+        "engineRows": 9237,
+        "matched": 9233,
+        "mismatched": 0,
+        "failed": 0,
+        "missingOracle": 0,
+        "duplicateIdNodes": 4
+      },
+      "stagingReleased": true,
+      "stagingReleaseMode": "legacy",
+      "engineVerification": "not-needed",
+      "candidateSource": "oracle",
+      "idsLines": 9233,
+      "hashRows": 9237,
+      "hashMatches": 9233,
+      "stagingFiles": 0,
+      "status": "verified"
+    },
+    {
+      "batch": 2,
+      "inCheckpoint": true,
+      "volumeBootLBA": 63,
+      "plannedFiles": 619,
+      "plannedBytes": 19370243023,
+      "stats": {
+        "requested": 619,
+        "engineRows": 619,
+        "matched": 619,
+        "mismatched": 0,
+        "failed": 0,
+        "missingOracle": 0,
+        "duplicateIdNodes": 0
+      },
+      "stagingReleased": true,
+      "stagingReleaseMode": "per-file (safe-delete bulk guard)",
+      "engineVerification": "not-needed",
+      "candidateSource": "oracle",
+      "idsLines": 619,
+      "hashRows": 619,
+      "hashMatches": 619,
+      "stagingFiles": 0,
+      "status": "verified"
+    },
+    {
+      "batch": 3,
+      "inCheckpoint": true,
+      "volumeBootLBA": 209728638,
+      "plannedFiles": 105901,
+      "plannedBytes": 25007848162,
+      "stats": {
+        "requested": 105901,
+        "engineRows": 105905,
+        "matched": 104603,
+        "mismatched": 11,
+        "failed": 1287,
+        "missingOracle": 0,
+        "duplicateIdNodes": 4
+      },
+      "stagingReleased": true,
+      "stagingReleaseMode": "truncate-to-zero (background-safe)",
+      "engineVerification": "verified",
+      "candidateSource": "oracle",
+      "idsLines": 105901,
+      "hashRows": 105905,
+      "hashMatches": 104603,
+      "stagingFiles": 104618,
+      "stagingNonZeroBytesFiles": 0,
+      "status": "verified"
+    },
+    {
+      "batch": 4,
+      "inCheckpoint": true,
+      "volumeBootLBA": 63,
+      "plannedFiles": 2,
+      "plannedBytes": 56725787,
+      "stats": {
+        "requested": 2,
+        "engineRows": 2,
+        "matched": 0,
+        "mismatched": 0,
+        "failed": 1,
+        "missingOracle": 1,
+        "duplicateIdNodes": 0
+      },
+      "stagingReleased": true,
+      "stagingReleaseMode": "truncate-to-zero (background-safe)",
+      "engineVerification": "verified",
+      "candidateSource": "engine",
+      "idsLines": 2,
+      "hashRows": 2,
+      "hashMatches": 0,
+      "stagingFiles": 1,
+      "stagingNonZeroBytesFiles": 0,
+      "status": "verified"
+    },
+    {
+      "batch": 5,
+      "inCheckpoint": true,
+      "volumeBootLBA": 209728638,
+      "plannedFiles": 249456,
+      "plannedBytes": 25769610905,
+      "stats": {
+        "requested": 249456,
+        "engineRows": 249459,
+        "matched": 249438,
+        "mismatched": 11,
+        "failed": 0,
+        "missingOracle": 6,
+        "duplicateIdNodes": 4
+      },
+      "stagingReleased": true,
+      "stagingReleaseMode": "truncate-to-zero (background-safe)",
+      "engineVerification": "FAILED",
+      "candidateSource": "engine",
+      "idsLines": 249456,
+      "hashRows": 249459,
+      "hashMatches": 249438,
+      "stagingFiles": 249459,
+      "stagingNonZeroBytesFiles": 0,
+      "status": "verified"
+    },
+    {
+      "batch": 6,
+      "inCheckpoint": false,
+      "volumeBootLBA": 209728638,
+      "plannedFiles": 206135,
+      "plannedBytes": 25760159656,
+      "status": "pending"
+    },
+    {
+      "batch": 7,
+      "inCheckpoint": false,
+      "volumeBootLBA": 209728638,
+      "plannedFiles": 307031,
+      "plannedBytes": 16018245529,
+      "status": "pending"
+    }
+  ],
+  "errors": [
+    "batch_005: anomalies have no engine_verification.json | batch_005: engine-plan requestScope not reproducible",
+    "checkpoint records unexplained mismatches=22 / failures=1288",
+    "batch_005: anomalies have no engine_verification.json | batch_005: engine-plan requestScope not reproducible",
+    "batch_005: matched=249438 != requested=249456 (unexplained)",
+    "batch_005: missingOracle=6 is never excusable",
+    "batch_005: mismatched=11 failed=0 unexplained"
+  ],
+  "warnings": [],
+  "info": [
+    "plan.json: 6 batches / 879546 files / 144871281616 bytes (historical)",
+    "plan_engine.json: 4 remaining batches / 762624 files / 67604741877 bytes (candidateSource=engine); merged total=7 batches",
+    "merged plan: 7 batches",
+    "checkpoint incomplete: 5/7 batches",
+    "batch_003: anomalies explained -> 11 corrected oracle + 1287 retry + 4 ADS-id rows, effective 105901/105901 verified",
+    "batch_004: engine-plan anomalies explained -> 2/2 distinct ids (declared 2 incl. 0 duplicate rows), classifications={\"exactSha256Match\": 2}",
+    "checkpoint: completed=[1, 2, 3, 4, 5] totals={\"files\": 363893, \"bytes\": 95265822417, \"matched\": 363893, \"mismatched\": 22, \"failed\": 1288}",
+    "batch_001: 4 match=0 rows = 0 failed + 0 false mismatch + 4 id-collision",
+    "batch_001: staging tree fully deleted",
+    "batch_002: 0 match=0 rows = 0 failed + 0 false mismatch + 0 id-collision",
+    "batch_002: staging tree fully deleted",
+    "batch_003: anomalies explained -> 11 corrected oracle + 1287 retry + 4 ADS-id rows, effective 105901/105901 verified",
+    "batch_003: 1302 match=0 rows = 1287 failed + 11 false mismatch + 4 id-collision",
+    "batch_003: 104618 zero-byte shells retained until final cleanup",
+    "batch_004: engine-plan anomalies explained -> 2/2 distinct ids (declared 2 incl. 0 duplicate rows), classifications={\"exactSha256Match\": 2}",
+    "batch_004: missingOracle=1 explained by engine-plan byte verification (engine-only ADS nodes have no row in the historical oracle candidate CSV)",
+    "batch_004: 2 match=0 rows = 1 failed + 0 false mismatch + 0 id-collision",
+    "batch_004: 1 zero-byte shells retained until final cleanup",
+    "batch_005: 21 match=0 rows = 0 failed + 11 false mismatch + 4 id-collision",
+    "batch_005: 249459 zero-byte shells retained until final cleanup",
+    "zero-write: SOURCE DISK UNCHANGED @ 2026-11-14T09:46:20.244190Z (7 points, changed=[])",
+    "baseline: 7 sampling points / 0 read failures"
+  ]
+}

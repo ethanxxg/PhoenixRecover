@@ -1,0 +1,67 @@
+﻿dataset_id,fs_kind,result,duration_sec,total_files,deleted_files,recover_ok,image_path,notes
+dfr-01-fat,FAT,PASS,0.256,9,1,3,D:/dev/PhoenixRecover\testdata\cfreds\dfr-01-fat.dd,scan+recover ok
+dfr-01-ntfs,NTFS,PASS,0.002,14,1,1,D:/dev/PhoenixRecover\testdata\cfreds\dfr-01-ntfs.dd,scan+recover ok
+dfr-01-xfat,exFAT,PASS,0.004,8,2,2,D:/dev/PhoenixRecover\testdata\cfreds\dfr-01-xfat.dd,scan+recover ok
+dfr-05-braid-fat,FAT,PASS,0.215,12,2,6,D:/dev/PhoenixRecover\testdata\cfreds\dfr-05-braid-fat.dd,scan+recover ok
+dfr-05-braid-ntfs,NTFS,PASS,0.004,15,2,2,D:/dev/PhoenixRecover\testdata\cfreds\dfr-05-braid-ntfs.dd,scan+recover ok
+dfr-05-fat,FAT,PASS,0.221,21,2,6,D:/dev/PhoenixRecover\testdata\cfreds\dfr-05-fat.dd,scan+recover ok
+dfr-05-ntfs,NTFS,PASS,0.028,18,2,2,D:/dev/PhoenixRecover\testdata\cfreds\dfr-05-ntfs.dd,scan+recover ok
+dfr-01-recycle-fat,FAT,PASS,0.216,19,3,7,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-01-recycle\dfr-01-recycle-fat.dd,scan+recover ok
+dfr-01-recycle-ntfs,NTFS,PASS,0.003,18,2,2,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-01-recycle\dfr-01-recycle-ntfs.dd,scan+recover ok
+dfr-02-fat,FAT,PASS,0.207,12,1,3,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-02\dfr-02-fat.dd,scan+recover ok
+dfr-02-ntfs,NTFS,PASS,0.002,15,1,1,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-02\dfr-02-ntfs.dd,scan+recover ok
+dfr-02-xfat,exFAT,PASS,0.002,9,2,1,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-02\dfr-02-xfat.dd,scan+recover ok
+dfr-03-fat,FAT,PASS,0.201,18,1,3,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-03\dfr-03-fat.dd,scan+recover ok
+dfr-03-ntfs,NTFS,PASS,0.018,17,1,1,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-03\dfr-03-ntfs.dd,scan+recover ok
+dfr-03-xfat,exFAT,PASS,0.003,11,2,1,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-03\dfr-03-xfat.dd,scan+recover ok
+dfr-04-fat,FAT,PASS,0.256,72,12,36,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-04\dfr-04-fat.dd,scan+recover ok
+dfr-04-ntfs,NTFS,PASS,0.024,35,12,12,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-04\dfr-04-ntfs.dd,scan+recover ok
+dfr-04-xfat,exFAT,PASS,0.019,29,13,13,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-04\dfr-04-xfat.dd,scan+recover ok
+dfr-05-xfat,exFAT,PASS,0.003,12,3,1,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-05\dfr-05-xfat.dd,scan+recover ok
+dfr-05-braid-xfat,exFAT,PASS,0.002,11,3,1,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-05-braid\dfr-05-braid-xfat.dd,scan+recover ok
+dfr-05-nest-fat,FAT,PASS,0.229,21,2,6,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-05-nest\dfr-05-nest-fat.dd,scan+recover ok
+dfr-05-nest-ntfs,NTFS,PASS,0.005,18,2,2,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-05-nest\dfr-05-nest-ntfs.dd,scan+recover ok
+dfr-05-nest-xfat,exFAT,PASS,0.003,12,3,1,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-05-nest\dfr-05-nest-xfat.dd,scan+recover ok
+dfr-06-fat,FAT,PARTIAL,0.792,6,1,0,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-06\dfr-06-fat.dd,deleted found, recover failed
+dfr-06-ntfs,NTFS,PASS,0.900,13,1,1,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-06\dfr-06-ntfs.dd,scan+recover ok
+dfr-06-xfat,exFAT,PASS,0.120,9,2,2,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-06\dfr-06-xfat.dd,scan+recover ok
+dfr-07-fat,FAT,PASS,0.232,18,4,9,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07\dfr-07-fat.dd,scan+recover ok
+dfr-07-ntfs,NTFS,PASS,0.026,20,3,3,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07\dfr-07-ntfs.dd,scan+recover ok
+dfr-07-xfat,exFAT,PASS,0.007,13,4,4,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07\dfr-07-xfat.dd,scan+recover ok
+dfr-07-one-fat,FAT,PASS,0.234,15,3,6,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07-one\dfr-07-one-fat.dd,scan+recover ok
+dfr-07-one-ntfs,NTFS,PASS,0.013,16,2,2,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07-one\dfr-07-one-ntfs.dd,scan+recover ok
+dfr-07-one-xfat,exFAT,PASS,0.005,12,3,3,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07-one\dfr-07-one-xfat.dd,scan+recover ok
+dfr-07-two-fat,FAT,PASS,0.208,15,2,3,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07-two\dfr-07-two-fat.dd,scan+recover ok
+dfr-07-two-ntfs,NTFS,PASS,0.005,16,1,1,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07-two\dfr-07-two-ntfs.dd,scan+recover ok
+dfr-07-two-xfat,exFAT,PASS,0.004,12,2,2,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07-two\dfr-07-two-xfat.dd,scan+recover ok
+dfr-08-fat,FAT,PASS,0.275,45,15,42,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-08\dfr-08-fat.dd,scan+recover ok
+dfr-08-ntfs,NTFS,PASS,0.038,25,13,13,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-08\dfr-08-ntfs.dd,scan+recover ok
+dfr-08-xfat,exFAT,PASS,0.018,21,14,14,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-08\dfr-08-xfat.dd,scan+recover ok
+dfr-09-fat,FAT,PASS,0.286,789,260,48,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-09\dfr-09-fat.dd,scan+recover ok
+dfr-09-ntfs,NTFS,PASS,0.030,274,260,16,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-09\dfr-09-ntfs.dd,scan+recover ok
+dfr-09-xfat,exFAT,PASS,0.024,266,257,16,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-09\dfr-09-xfat.dd,scan+recover ok
+dfr-10-fat,FAT,PASS,0.299,2352,260,48,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-10\dfr-10-fat.dd,scan+recover ok
+dfr-10-ntfs,NTFS,PASS,0.038,795,260,16,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-10\dfr-10-ntfs.dd,scan+recover ok
+dfr-10-xfat,exFAT,PASS,0.030,779,257,16,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-10\dfr-10-xfat.dd,scan+recover ok
+dfr-11-fat,FAT,PASS,0.208,37,3,9,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-11\dfr-11-fat.dd,scan+recover ok
+dfr-11-ntfs,NTFS,PASS,0.008,23,3,3,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-11\dfr-11-ntfs.dd,scan+recover ok
+dfr-11-xfat,exFAT,PASS,0.002,14,1,1,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-11\dfr-11-xfat.dd,scan+recover ok
+dfr-11-compress-ntfs,NTFS,PASS,0.004,25,3,3,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-11-compressed\dfr-11-compress-ntfs.dd,scan+recover ok
+dfr-11-mft-ntfs,NTFS,PASS,0.003,23,3,3,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-11-mft\dfr-11-mft-ntfs.dd,scan+recover ok
+dfr-12-fat,FAT,PASS,0.258,53,9,27,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-12\dfr-12-fat.dd,scan+recover ok
+dfr-12-ntfs,NTFS,PASS,0.025,28,9,9,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-12\dfr-12-ntfs.dd,scan+recover ok
+dfr-12-xfat,exFAT,PASS,0.004,16,4,1,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-12\dfr-12-xfat.dd,scan+recover ok
+dfr-13-fat,FAT,PASS,0.340,636,118,48,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-13\dfr-13-fat.dd,scan+recover ok
+dfr-13-ntfs,NTFS,PASS,0.036,223,118,16,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-13\dfr-13-ntfs.dd,scan+recover ok
+dfr-13-xfat,exFAT,PASS,0.033,217,119,16,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-13\dfr-13-xfat.dd,scan+recover ok
+dfr-14-fat,FAT,PASS,0.233,18,4,12,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-14\dfr-14-fat.dd,scan+recover ok
+dfr-14-ntfs,NTFS,PASS,0.014,31,10,8,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-14\dfr-14-ntfs.dd,scan+recover ok
+dfr-15-fat,FAT,WARN,0.219,21,0,0,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-15\dfr-15-fat.dd,scan ok, no deleted files
+dfr-15-ntfs,NTFS,WARN,0.002,22,0,0,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-15\dfr-15-ntfs.dd,scan ok, no deleted files
+dfr-15-xfat,exFAT,PASS,0.003,14,1,1,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-15\dfr-15-xfat.dd,scan+recover ok
+dfr-16-fat,FAT,WARN,0.213,3093,0,0,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-16\dfr-16-fat.dd,scan ok, no deleted files
+dfr-16-ntfs,NTFS,WARN,0.005,1042,0,0,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-16\dfr-16-ntfs.dd,scan ok, no deleted files
+dfr-16-xfat,exFAT,PASS,0.010,1023,1,1,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-16\dfr-16-xfat.dd,scan+recover ok
+dfr-17-fat,FAT,WARN,0.215,267,0,0,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-17\dfr-17-fat.dd,scan ok, no deleted files
+dfr-17-ntfs,NTFS,WARN,0.002,101,0,0,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-17\dfr-17-ntfs.dd,scan ok, no deleted files
+dfr-17-xfat,exFAT,PASS,0.003,97,1,1,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-17\dfr-17-xfat.dd,scan+recover ok

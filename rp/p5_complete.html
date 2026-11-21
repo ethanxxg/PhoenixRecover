@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>P5 完成 - PhoenixRecover 原型</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="p5">
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <div class="title">PhoenixRecover</div><div class="ver">v1.0</div>
+      </div>
+      <div class="top-actions">
+        <a class="btn" href="index.html">原型入口</a>
+      </div>
+    </div>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="nav">
+          <div class="nav-group">数据恢复</div>
+          <a href="p1_location.html" data-page="p1">位置选择</a>
+          <a href="p3_results.html" data-page="p3">结果&预览</a>
+          <a href="p4_target.html" data-page="p4">恢复目标</a>
+          <a class="active" href="p5_complete.html" data-page="p5">完成</a>
+        </div>
+      </aside>
+
+      <main class="content">
+        <div class="page-title">恢复完成</div>
+
+        <div class="kv">
+          <div class="item"><div class="k">成功</div><div class="v" style="color:var(--success)">10</div></div>
+          <div class="item"><div class="k">失败</div><div class="v" style="color:var(--danger)">2</div></div>
+          <div class="item"><div class="k">总大小</div><div class="v">1.2 GB</div></div>
+          <div class="item"><div class="k">恢复路径</div><div class="v">D:\Recovered\</div></div>
+        </div>
+
+        <div class="section">
+          <h3>详细结果</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>文件名</th>
+                <th style="width:120px">状态</th>
+                <th>失败原因</th>
+                <th>目标路径</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>IMG_1024.jpg</td>
+                <td><span class="tag h">成功</span></td>
+                <td>—</td>
+                <td>D:\Recovered\IMG_1024.jpg</td>
+              </tr>
+              <tr>
+                <td>video_01.mp4</td>
+                <td><span class="tag l">失败</span></td>
+                <td>空间不足/读错误（原型占位）</td>
+                <td>D:\Recovered\video_01.mp4</td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="note">原型占位：这里后续可展示可重试的失败列表与日志入口。</div>
+        </div>
+
+        <div class="footer-actions">
+          <a class="btn" href="#" onclick="alert('原型占位：打开文件夹');return false;">打开文件夹</a>
+          <a class="btn" href="#" onclick="alert('原型占位：查看日志');return false;">查看日志</a>
+          <a class="btn" href="#" onclick="alert('原型占位：重试失败');return false;">重试失败</a>
+          <button class="btn primary" id="newRecovery" type="button">新建恢复</button>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,7 @@
+[engine] requested ids=1
+[engine] parsed NTFS nodes=11134
+[engine] matched 1 of 1 requested nodes
+[engine] output path mode: isolated by id (collision-safe)
+[engine] FORMAT SignatureDB built-in signatures=513 engineFormat=on
+[engine] succeeded=1 failed=0 skipped=0 cancelled=0 badSectors=0 readAheadHits=0 readAheadFills=0 sectorsRead=133368
+[engine] FORMAT classified=1 match=0 mismatch=1 noSignature=0

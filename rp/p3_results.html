@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>P3 结果&预览 - PhoenixRecover 原型</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="p3">
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <div class="title">PhoenixRecover</div><div class="ver">v1.0</div>
+      </div>
+      <div class="top-actions">
+        <a class="btn" href="index.html">原型入口</a>
+      </div>
+    </div>
+
+    <div class="layout single">
+      <main class="content">
+        <div class="scan-header">
+          <div class="scan-left">
+            <button class="btn icon" id="backToLocation" type="button" title="返回">←</button>
+            <div>
+              <div class="scan-title">扫描结果</div>
+            </div>
+          </div>
+          <div class="scan-actions">
+            <button class="btn" id="viewToggle" type="button" title="切换视图">列表</button>
+            <input class="search-input" id="searchInput" type="text" placeholder="搜索文件或文件夹" />
+            <button class="btn icon" id="searchBtn" type="button" title="搜索">🔎</button>
+          </div>
+        </div>
+
+        <div class="progress-wrap" style="margin:0 -26px">
+          <div class="progress-bar" id="progressBar" style="width:100%"></div>
+        </div>
+
+        <div class="filter-panel" id="filterPanel" style="display:flex;gap:10px;align-items:center;padding:10px 12px;margin:0 -26px;border-bottom:1px solid var(--border);flex-wrap:wrap">
+          <span style="font-size:12px;color:#6b7280;font-weight:700">筛选：</span>
+          <select id="filterType" style="height:30px;border-radius:8px;border:1px solid #d1d5db;padding:0 8px;font-size:12px">
+            <option value="">全部类型</option>
+            <option>图片</option><option>视频</option><option>文档</option>
+            <option>音频</option><option>压缩文件</option><option>其他</option>
+          </select>
+          <select id="filterRecovery" style="height:30px;border-radius:8px;border:1px solid #d1d5db;padding:0 8px;font-size:12px">
+            <option value="">全部可恢复性</option>
+            <option value="h">高</option><option value="m">中</option><option value="l">低</option>
+          </select>
+          <select id="filterSize" style="height:30px;border-radius:8px;border:1px solid #d1d5db;padding:0 8px;font-size:12px">
+            <option value="">全部大小</option>
+            <option value="small">&lt; 1 MB</option><option value="medium">1 MB – 100 MB</option><option value="large">&gt; 100 MB</option>
+          </select>
+          <button class="btn" id="filterReset" type="button" style="height:30px;font-size:12px;padding:0 10px">重置</button>
+        </div>
+
+        <div class="view-tabs">
+          <a class="active" href="#" data-tab="path" onclick="return false;">路径</a>
+          <a href="#" data-tab="type" onclick="return false;">类型</a>
+        </div>
+
+        <div class="split no-preview">
+          <div class="panel tree-panel">
+            <div class="tree">
+              <div id="treePath">
+                <div id="pathTreeNodes"></div>
+              </div>
+              <div id="treeType" class="hidden">
+                <div id="typeNodes"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel file-panel">
+            <div class="grid-head">
+              <div class="grid-title" id="gridTitle">全部</div>
+              <div class="grid-meta">已选：<b id="selectedCount">0</b></div>
+            </div>
+            <div class="thumb-grid" id="thumbGrid"></div>
+            <div class="list-view hidden" id="listView"></div>
+          </div>
+
+          <!-- previewPanel removed: widen file list -->
+        </div>
+
+        <div class="results-footer">
+          <div class="results-left">
+            <div class="check">✓</div>
+            <div>
+              <div class="results-title">扫描完成，找到文件：<span id="foundCountText">0</span></div>
+              <div class="results-sub" id="foundSizeText">（原型占位：3.51 TB）</div>
+            </div>
+          </div>
+          <button class="btn primary" id="recoverAllBtn" type="button">恢复全部</button>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+

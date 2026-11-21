@@ -1,0 +1,98 @@
+{
+  "generatedAt": "2026-11-14T16:09:54",
+  "generatedBy": "tools/verify_engine_gaps.py",
+  "purpose": "Independent read-only proof that the engine misses $DATA stored in $ATTRIBUTE_LIST extension MFT records.",
+  "engineCsvIsDiscoverySource": true,
+  "sourceDiskWriteOperations": 0,
+  "gapNodeCount": 1,
+  "gapBytes": 56725784,
+  "noPayloadDeletedExtensionCount": 1,
+  "noPayloadIds": [
+    269279
+  ],
+  "verdict": "ENGINE ATTRIBUTE_LIST GAP CONFIRMED",
+  "volumes": [
+    {
+      "bootLBA": 63,
+      "engineCsv": "engine_nodes_vol63.csv",
+      "gapNodes": 1,
+      "nodes": [
+        {
+          "id": 78,
+          "name": "aliworkbench.log.old",
+          "path": "\\AliWorkbenchData\\System\\aliworkbench.log.old",
+          "engineSize": 56725784,
+          "engineClusterCount": 0,
+          "engineResidentSize": 0,
+          "engineStatus": 2,
+          "truthSha256": "4992458186e62e89a61cffc34b90a99629ad5df80b41d9763a8f62397c9d536c",
+          "truthSize": 56725784,
+          "payloadBytesRead": 56725784,
+          "flattenedRuns": 565,
+          "extensionRecords": [
+            {
+              "recordIndex": 10902,
+              "lowestVcn": 0,
+              "sequence": 76,
+              "runCount": 204,
+              "clusters": 4508,
+              "declaredRealSize": 56725784
+            },
+            {
+              "recordIndex": 11004,
+              "lowestVcn": 4508,
+              "sequence": 1,
+              "runCount": 205,
+              "clusters": 4837,
+              "declaredRealSize": 0
+            },
+            {
+              "recordIndex": 10737,
+              "lowestVcn": 9345,
+              "sequence": 18,
+              "runCount": 156,
+              "clusters": 4505,
+              "declaredRealSize": 0
+            }
+          ],
+          "source": "$ATTRIBUTE_LIST -> extension MFT records, read-only",
+          "sizeAgreesWithEngine": true
+        }
+      ]
+    },
+    {
+      "bootLBA": 209728638,
+      "engineCsv": "engine_nodes_vol209728638.csv",
+      "gapNodes": 1,
+      "nodes": [
+        {
+          "id": 269279,
+          "name": "535c4f30beaa7bf9b77fb07ed4df1fa8226c6a63.svn-base",
+          "path": "\\source\\dlp\\nfsdk-src-1.5.5.6-pf-src-1.1.9.4\\driver_tdi\\535c4f30beaa7bf9b77fb07ed4df1fa8226c6a63.svn-base",
+          "engineSize": 43515904,
+          "engineClusterCount": 0,
+          "engineResidentSize": 0,
+          "engineStatus": 0,
+          "noPayload": true,
+          "truthSize": 0,
+          "truthSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+          "extensionRecords": [
+            {
+              "recordIndex": 269280,
+              "lowestVcn": 0,
+              "sequence": 1,
+              "runCount": 0,
+              "clusters": 0,
+              "declaredRealSize": 0
+            }
+          ],
+          "reason": "extension $DATA has no runlist / realSize=0 (deleted or truncated); engine declared size is stale $FILE_NAME.realSize",
+          "classification": "noPayloadDeletedExtension",
+          "engineDeclaredSizeIsStale": true
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "negativeGuard": false
+}

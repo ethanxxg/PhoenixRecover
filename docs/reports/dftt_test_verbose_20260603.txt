@@ -1,0 +1,71 @@
+﻿=== DFTT_FAT_Undelete ===
+Image: D:/dev/PhoenixRecover\testdata\dftt\6-undel-fat\6-fat-undel.dd
+[2026-06-04 16:51:20.514] [INFO ] SectorReader::OpenImage ok Sector size: 512, total sectors: 12032
+Total nodes found: 13
+  [FAT16] name=_RAG1.DAT            size=  1584 dir=0 status=0 path=\_RAG1.DAT
+  [FAT16] name=_RAG2.DAT            size=  3873 dir=0 status=0 path=\_RAG2.DAT
+  [FAT16] name=_ING.DAT             size=   780 dir=0 status=0 path=\_ING.DAT
+  [FAT16] name=_ULT1.DAT            size=  3801 dir=0 status=0 path=\_ULT1.DAT
+  [FAT16] name=_IR1                 size=  1024 dir=1 status=0 path=\_IR1\
+  [FAT16] name=DIR2                 size=     0 dir=1 status=2 path=\_IR1\DIR2\
+  [FAT16] name=FRAG3.DAT            size=  2027 dir=0 status=2 path=\_IR1\DIR2\FRAG3.DAT
+  [FAT16] name=MULT2.DAT            size=  1715 dir=0 status=2 path=\_IR1\MULT2.DAT
+  [FAT16] name=System Volume        size=  1024 dir=1 status=0 path=\System Volume\
+  [FAT16] name=_restore{A25F48CA-6632-4143-8EF8-3586A84AB5AF} size=     0 dir=1 status=2 path=\System Volume\_restore{A25F48CA-6632-4143-8EF8-3586A84AB5AF}\
+  [FAT16] name=_P1                  size=  1024 dir=1 status=0 path=\System Volume\_restore{A25F48CA-6632-4143-8EF8-3586A84AB5AF}\_P1\
+  [FAT16] name=FRAG3.DAT            size=  2027 dir=0 status=2 path=\System Volume\_restore{A25F48CA-6632-4143-8EF8-3586A84AB5AF}\_P1\FRAG3.DAT
+  [FAT16] name=  dir1/mult2.dat: found, size OK
+  dir1/dir2/frag3.dat: found, size OK
+
+=== DFTT FAT Undelete: ALL CHECKS PASSED ===
+
+=== DFTT_FAT_RecoverBytes ===
+[2026-06-04 16:51:20.531] [INFO ] SectorReader::OpenImage ok OK sing.dat md5=59b20779f69ff9f0ac5fcd2c38835a79
+OK mult1.dat md5=ffd27bd782bdce67750b6b9ee069d2ef
+OK frag1.dat md5=7a3bc5b763bef201202108f4ba128149 (reconstructed)
+OK frag2.dat md5=0e80ab84ef0087e60dfc67b88a1cf13e (reconstructed)
+OK mult2.dat md5=59cf0e9cd107bc1e75afb7374f6e05bb (reconstructed)
+OK frag3.dat md5=21121699487f3fbbdb9a4b3391b6d3e0 (reconstructed)
+OK: DFTT #6 FAT recover bytes (required=6 optional=0)
+
+=== DFTT_NTFS_Undelete ===
+Image: D:/dev/PhoenixRecover\testdata\dftt\7-undel-ntfs\7-ntfs-undel.dd
+[2026-06-04 16:52:35.720] [INFO ] SectorReader::OpenImage ok Sector size: 512, total sectors: 12032
+Total nodes found: 15
+
+=== DFTT NTFS Undelete: ALL CHECKS PASSED ===
+
+=== DFTT_NTFS_RecoverBytes ===
+[2026-06-04 16:52:35.720] [INFO ] SectorReader::OpenImage ok OK res1.dat md5=9036637712b491904cd0bfbdbe648453
+OK sing1.dat md5=59b20779f69ff9f0ac5fcd2c38835a79
+OK mult1.dat md5=ffd27bd782bdce67750b6b9ee069d2ef
+OK frag1.dat md5=7a3bc5b763bef201202108f4ba128149
+OK frag2.dat md5=0e80ab84ef0087e60dfc67b88a1cf13e
+OK mult2.dat md5=59cf0e9cd107bc1e75afb7374f6e05bb
+OK frag3.dat md5=21121699487f3fbbdb9a4b3391b6d3e0
+OK sing2.dat md5=c229626f6a71b167ad7e50c4f2fccdb1
+OK: DFTT #7 NTFS recover bytes (required=8 optional=0)
+
+=== DFTT_11_CARVE_FAT ===
+[2026-06-04 16:52:35.859] [INFO ] SectorReader::OpenImage ok Golden paul.jpg carvedBytes=29885 offset=0x9A0A00
+OK: DFTT #11 RawScan carve + paul.jpg golden bytes
+
+=== PartitionProbe ===
+
+--- TestSectorReaderOpenImage ---
+[2026-06-04 16:52:36.033] [INFO ] SectorReader::OpenImage ok   PASSED
+
+--- TestMbrParsing (CFReDS dfr-01-fat.dd) ---
+  MBR has 3 partitions
+  Part[0]: start=128 sectors=16384 detected=1 fs=FAT16 fsSectors=16384
+  Part[1]: start=16512 sectors=65536 detected=1 fs=FAT16 fsSectors=65536
+  Part[2]: start=82048 sectors=131072 detected=1 fs=FAT32 fsSectors=131072
+  PASSED
+
+--- TestNtfsAutodetect (DFTT #10) ---
+  Part[0]: start=63 fs=NTFS sectors=96326
+  Part[1]: start=96390 fs=NTFS sectors=96389
+  PASSED (2 NTFS partitions)
+
+=== PartitionProbe + SectorReader: ALL CHECKS PASSED ===
+

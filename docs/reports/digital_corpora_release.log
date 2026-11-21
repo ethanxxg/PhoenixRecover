@@ -1,0 +1,62 @@
+﻿=== Release after batch 1 2026-06-08 16:57:56 ===
+  D:\dev\PhoenixRecover\testdata\digital-corpora-disk-images\nps-2009-ubnist1\ubnist1.gen0.dd  1.962 GiB
+  D:\dev\PhoenixRecover\testdata\digital-corpora-disk-images\nps-2009-ubnist1\ubnist1.gen1.dd  1.962 GiB
+  D:\dev\PhoenixRecover\testdata\digital-corpora-disk-images\nps-2009-ubnist1\ubnist1.gen2.dd  0 GiB
+  D:\dev\PhoenixRecover\testdata\digital-corpora-disk-images\nps-2014-usb-nondeterministic\windows-ftkimager-first.dd  0 GiB
+  D:\dev\PhoenixRecover\testdata\digital-corpora-disk-images\nps-2014-usb-nondeterministic\windows-ftkimager-second.dd  0 GiB
+Total freed: 3.92 GiB
+=== Release after batch 2 2026-06-08 17:04:01 ===
+  D:\dev\PhoenixRecover\testdata\digital-corpora-disk-images\nps-2009-casper-rw\ubnist1.casper-rw.gen1.dd  0.586 GiB
+  D:\dev\PhoenixRecover\testdata\digital-corpora-disk-images\nps-2009-casper-rw\ubnist1.casper-rw.gen2.dd  0.586 GiB
+  D:\dev\PhoenixRecover\testdata\digital-corpora-disk-images\nps-2009-casper-rw\ubnist1.casper-rw.gen3.dd  0.586 GiB
+  D:\dev\PhoenixRecover\testdata\digital-corpora-disk-images\nps-2014-usb-nondeterministic\linux-dc3dd-first.dd  0.94 GiB
+  D:\dev\PhoenixRecover\testdata\digital-corpora-disk-images\nps-2009-ubnist1\ubnist1.gen0.dd  1.962 GiB
+  D:\dev\PhoenixRecover\testdata\digital-corpora-disk-images\nps-2009-ubnist1\ubnist1.gen1.dd  1.962 GiB
+Total freed: 6.62 GiB
+=== Release after batch 3 2026-06-08 17:08:26 ===
+  D:\dev\PhoenixRecover\testdata\digital-corpora-disk-images\nps-2009-domexusers\nps-2009-domexusers.dd  40 GiB
+Total freed: 40 GiB
+=== Release after batch 4 2026-06-08 17:10:21 ===
+  D:\dev\PhoenixRecover\testdata\digital-corpora-disk-images\nps-2014-usb-nondeterministic\linux-dc3dd-second.dd  0.94 GiB
+  D:\dev\PhoenixRecover\testdata\digital-corpora-disk-images\nps-2014-usb-nondeterministic\windows-ftkimager-first.dd  0.94 GiB
+  D:\dev\PhoenixRecover\testdata\digital-corpora-disk-images\nps-2014-usb-nondeterministic\windows-ftkimager-second.dd  0.94 GiB
+Total freed: 2.82 GiB
+=== Cache release after batch 2 2026-06-08 19:28:15 ===
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2009-casper-rw\ubnist1.casper-rw.gen1.dd  0.586 GiB
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2009-casper-rw\ubnist1.casper-rw.gen2.dd  0.586 GiB
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2009-casper-rw\ubnist1.casper-rw.gen3.dd  0.586 GiB
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2014-usb-nondeterministic\linux-dc3dd-first.dd  0.94 GiB
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2009-ubnist1\ubnist1.gen0.dd  1.962 GiB
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2009-ubnist1\ubnist1.gen1.dd  1.962 GiB
+Total freed: 6.62 GiB (cache only)
+=== Cache release after batch 1 2026-06-09 10:29:48 ===
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2009-ubnist1\ubnist1.gen0.dd  1.962 GiB
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2009-ubnist1\ubnist1.gen1.dd  1.962 GiB
+Total freed: 3.92 GiB (cache only)
+=== Cache release after batch 2 2026-06-09 10:29:49 ===
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2009-casper-rw\ubnist1.casper-rw.gen1.dd  0.586 GiB
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2009-casper-rw\ubnist1.casper-rw.gen2.dd  0.586 GiB
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2009-casper-rw\ubnist1.casper-rw.gen3.dd  0.586 GiB
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2014-usb-nondeterministic\linux-dc3dd-first.dd  0.94 GiB
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2009-ubnist1\ubnist1.gen0.dd  1.962 GiB
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2009-ubnist1\ubnist1.gen1.dd  1.962 GiB
+Total freed: 6.62 GiB (cache only)
+=== Cache release after batch 3 2026-06-09 10:29:49 ===
+Total freed: 0 GiB (cache only)
+=== Cache release after batch 1 2026-06-09 10:31:18 ===
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2009-ubnist1\ubnist1.gen0.dd  1.962 GiB
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2009-ubnist1\ubnist1.gen1.dd  1.962 GiB
+Total freed: 3.92 GiB (cache only)
+=== Cache release after batch 2 2026-06-09 10:31:18 ===
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2009-casper-rw\ubnist1.casper-rw.gen1.dd  0.586 GiB
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2009-casper-rw\ubnist1.casper-rw.gen2.dd  0.586 GiB
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2009-casper-rw\ubnist1.casper-rw.gen3.dd  0.586 GiB
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2014-usb-nondeterministic\linux-dc3dd-first.dd  0.94 GiB
+Total freed: 2.7 GiB (cache only)
+=== Cache release after batch 3 2026-06-09 10:31:19 ===
+Total freed: 0 GiB (cache only)
+=== Cache release after batch 4 2026-06-09 14:03:55 ===
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2014-usb-nondeterministic\linux-dc3dd-second.dd  0.94 GiB
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2014-usb-nondeterministic\windows-ftkimager-first.dd  0.94 GiB
+  D:\dev\PhoenixRecover\build\ewf-cache\digital-corpora-disk-images\nps-2014-usb-nondeterministic\windows-ftkimager-second.dd  0.94 GiB
+Total freed: 2.82 GiB (cache only)

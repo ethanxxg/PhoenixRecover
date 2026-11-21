@@ -1,0 +1,67 @@
+﻿dataset_id,fs_kind,result,duration_sec,total_files,deleted_files,recover_ok,nist_exp_del,nist_exp_full,nist_checked,image_path,notes
+dfr-01-fat,FAT,PASS,0.224,9,3,3,3,3,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-01\dfr-01-fat.dd,NIST ok
+dfr-01-ntfs,NTFS,PASS,0.002,14,1,1,1,1,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-01\dfr-01-ntfs.dd,NIST ok
+dfr-01-xfat,exFAT,PASS,0.002,3,1,1,1,1,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-01\dfr-01-xfat.dd,NIST ok
+dfr-01-recycle-fat,FAT,PASS,0.227,19,7,7,0,0,no,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-01-recycle\dfr-01-recycle-fat.dd,scan+recover ok (no NIST benchmark entry)
+dfr-01-recycle-ntfs,NTFS,PASS,0.003,18,2,2,0,0,no,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-01-recycle\dfr-01-recycle-ntfs.dd,scan+recover ok (no NIST benchmark entry)
+dfr-02-fat,FAT,PASS,0.217,12,3,3,3,3,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-02\dfr-02-fat.dd,NIST ok
+dfr-02-ntfs,NTFS,PASS,0.002,15,1,1,1,1,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-02\dfr-02-ntfs.dd,NIST ok
+dfr-02-xfat,exFAT,PASS,0.002,4,1,1,1,1,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-02\dfr-02-xfat.dd,NIST ok
+dfr-03-fat,FAT,PASS,0.208,18,3,3,3,3,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-03\dfr-03-fat.dd,NIST ok
+dfr-03-ntfs,NTFS,PASS,0.022,17,1,1,1,1,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-03\dfr-03-ntfs.dd,NIST ok
+dfr-03-xfat,exFAT,PASS,0.003,6,1,1,1,1,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-03\dfr-03-xfat.dd,NIST ok
+dfr-04-fat,FAT,PASS,0.254,72,36,36,36,36,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-04\dfr-04-fat.dd,NIST ok
+dfr-04-ntfs,NTFS,PASS,0.022,35,12,12,12,12,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-04\dfr-04-ntfs.dd,NIST ok
+dfr-04-xfat,exFAT,PASS,0.017,24,12,12,12,12,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-04\dfr-04-xfat.dd,NIST ok
+dfr-05-fat,FAT,PASS,0.207,21,6,6,6,6,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-05\dfr-05-fat.dd,NIST ok
+dfr-05-ntfs,NTFS,PASS,0.050,18,2,2,2,2,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-05\dfr-05-ntfs.dd,NIST ok
+dfr-05-xfat,exFAT,PASS,0.004,7,2,2,2,2,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-05\dfr-05-xfat.dd,NIST ok
+dfr-05-braid-fat,FAT,PASS,0.239,12,6,6,6,6,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-05-braid\dfr-05-braid-fat.dd,NIST ok
+dfr-05-braid-ntfs,NTFS,PASS,0.008,15,2,2,2,2,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-05-braid\dfr-05-braid-ntfs.dd,NIST ok
+dfr-05-braid-xfat,exFAT,PASS,0.005,4,2,2,2,2,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-05-braid\dfr-05-braid-xfat.dd,NIST ok
+dfr-05-nest-fat,FAT,PASS,0.234,21,6,6,6,6,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-05-nest\dfr-05-nest-fat.dd,NIST ok
+dfr-05-nest-ntfs,NTFS,PASS,0.007,18,2,2,2,2,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-05-nest\dfr-05-nest-ntfs.dd,NIST ok
+dfr-05-nest-xfat,exFAT,PASS,0.004,7,2,2,2,2,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-05-nest\dfr-05-nest-xfat.dd,NIST ok
+dfr-06-fat,FAT,PASS,1.081,6,3,3,3,3,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-06\dfr-06-fat.dd,NIST ok
+dfr-06-ntfs,NTFS,PASS,1.647,13,1,1,1,1,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-06\dfr-06-ntfs.dd,NIST ok
+dfr-06-xfat,exFAT,PASS,0.212,2,1,1,1,1,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-06\dfr-06-xfat.dd,NIST ok
+dfr-07-fat,FAT,PASS,0.235,18,9,9,6,6,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07\dfr-07-fat.dd,NIST ok
+dfr-07-ntfs,NTFS,PASS,0.021,20,3,3,2,2,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07\dfr-07-ntfs.dd,NIST ok
+dfr-07-xfat,exFAT,PASS,0.150,6,3,3,1,1,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07\dfr-07-xfat.dd,NIST ok
+dfr-07-one-fat,FAT,PASS,0.230,15,6,6,3,3,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07-one\dfr-07-one-fat.dd,NIST ok
+dfr-07-one-ntfs,NTFS,PASS,0.012,16,2,2,1,1,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07-one\dfr-07-one-ntfs.dd,NIST ok
+dfr-07-one-xfat,exFAT,PASS,0.147,5,2,2,0,0,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07-one\dfr-07-one-xfat.dd,NIST ok
+dfr-07-two-fat,FAT,PASS,0.219,15,3,3,0,0,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07-two\dfr-07-two-fat.dd,NIST ok
+dfr-07-two-ntfs,NTFS,PASS,0.006,16,1,1,0,0,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07-two\dfr-07-two-ntfs.dd,NIST ok
+dfr-07-two-xfat,exFAT,PASS,0.110,5,1,1,0,0,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-07-two\dfr-07-two-xfat.dd,NIST ok
+dfr-08-fat,FAT,PASS,0.287,45,42,42,30,30,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-08\dfr-08-fat.dd,NIST ok
+dfr-08-ntfs,NTFS,PASS,0.050,25,13,13,10,10,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-08\dfr-08-ntfs.dd,NIST ok
+dfr-08-xfat,exFAT,PASS,0.143,14,13,13,11,11,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-08\dfr-08-xfat.dd,NIST ok
+dfr-09-fat,FAT,PASS,1.520,789,780,780,780,780,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-09\dfr-09-fat.dd,NIST ok
+dfr-09-ntfs,NTFS,PASS,0.412,274,260,260,260,260,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-09\dfr-09-ntfs.dd,NIST ok
+dfr-09-xfat,exFAT,PASS,0.369,259,256,256,253,253,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-09\dfr-09-xfat.dd,NIST ok
+dfr-10-fat,FAT,PASS,1.679,2352,780,780,780,780,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-10\dfr-10-fat.dd,NIST ok
+dfr-10-ntfs,NTFS,PASS,0.419,795,260,260,260,260,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-10\dfr-10-ntfs.dd,NIST ok
+dfr-10-xfat,exFAT,PASS,0.488,772,256,256,247,247,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-10\dfr-10-xfat.dd,NIST ok
+dfr-11-fat,FAT,PASS,0.246,37,9,9,9,9,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-11\dfr-11-fat.dd,NIST ok
+dfr-11-ntfs,NTFS,PASS,0.007,23,3,3,3,3,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-11\dfr-11-ntfs.dd,NIST ok
+dfr-11-xfat,exFAT,PASS,0.005,12,3,3,3,0,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-11\dfr-11-xfat.dd,NIST ok
+dfr-11-compress-ntfs,NTFS,PASS,0.004,25,3,3,0,0,no,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-11-compressed\dfr-11-compress-ntfs.dd,scan+recover ok (no NIST benchmark entry)
+dfr-11-mft-ntfs,NTFS,PASS,0.002,23,3,3,0,0,no,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-11-mft\dfr-11-mft-ntfs.dd,scan+recover ok (no NIST benchmark entry)
+dfr-12-fat,FAT,PASS,0.266,53,27,27,27,9,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-12\dfr-12-fat.dd,NIST ok
+dfr-12-ntfs,NTFS,PASS,0.029,28,9,9,9,9,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-12\dfr-12-ntfs.dd,NIST ok
+dfr-12-xfat,exFAT,PASS,0.170,17,9,9,9,3,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-12\dfr-12-xfat.dd,NIST ok
+dfr-13-fat,FAT,PASS,1.120,636,354,354,270,57,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-13\dfr-13-fat.dd,NIST ok
+dfr-13-ntfs,NTFS,PASS,0.216,223,118,118,87,92,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-13\dfr-13-ntfs.dd,NIST ok
+dfr-13-xfat,exFAT,PASS,0.344,212,118,118,90,13,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-13\dfr-13-xfat.dd,NIST ok
+dfr-14-fat,FAT,PASS,0.237,18,12,12,12,12,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-14\dfr-14-fat.dd,NIST ok
+dfr-14-ntfs,NTFS,PASS,0.011,31,10,8,8,8,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-14\dfr-14-ntfs.dd,NIST ok
+dfr-15-fat,FAT,PASS,0.216,21,0,0,0,0,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-15\dfr-15-fat.dd,NIST ok (no deleted, list-only)
+dfr-15-ntfs,NTFS,PASS,0.001,22,0,0,0,0,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-15\dfr-15-ntfs.dd,NIST ok (no deleted, list-only)
+dfr-15-xfat,exFAT,PASS,0.000,7,0,0,0,0,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-15\dfr-15-xfat.dd,NIST ok (no deleted, list-only)
+dfr-16-fat,FAT,PASS,0.213,3093,0,0,0,0,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-16\dfr-16-fat.dd,NIST ok (no deleted, list-only)
+dfr-16-ntfs,NTFS,PASS,0.005,1042,0,0,0,0,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-16\dfr-16-ntfs.dd,NIST ok (no deleted, list-only)
+dfr-16-xfat,exFAT,PASS,0.005,1016,0,0,0,0,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-16\dfr-16-xfat.dd,NIST ok (no deleted, list-only)
+dfr-17-fat,FAT,PASS,0.214,267,0,0,0,0,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-17\dfr-17-fat.dd,NIST ok (no deleted, list-only)
+dfr-17-ntfs,NTFS,PASS,0.001,101,0,0,0,0,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-17\dfr-17-ntfs.dd,NIST ok (no deleted, list-only)
+dfr-17-xfat,exFAT,PASS,0.001,89,0,0,0,0,yes,D:/dev/PhoenixRecover\testdata\dfr-test-images\dfr-17\dfr-17-xfat.dd,NIST ok (no deleted, list-only)

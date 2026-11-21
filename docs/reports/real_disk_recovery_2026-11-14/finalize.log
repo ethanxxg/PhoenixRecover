@@ -1,0 +1,83 @@
+[18:01:44] watcher started; waiting for checkpoint [1, 2, 3, 4, 5, 6, 7] (timeout=21600s)
+[18:01:44] waiting ... completed=[1, 2, 3, 4] elapsed=0s
+[18:10:56] watcher started; waiting for checkpoint [1, 2, 3, 4, 5, 6, 7] (timeout=43200s)
+[18:10:56] waiting ... completed=[1, 2, 3, 4] elapsed=0s
+[18:20:56] waiting ... completed=[1, 2, 3, 4, 5] elapsed=600s
+[18:30:56] waiting ... completed=[1, 2, 3, 4, 5] elapsed=1200s
+[18:40:56] waiting ... completed=[1, 2, 3, 4, 5] elapsed=1800s
+[18:50:58] waiting ... completed=[1, 2, 3, 4, 5] elapsed=2402s
+[19:00:58] waiting ... completed=[1, 2, 3, 4, 5] elapsed=3002s
+[19:10:58] waiting ... completed=[1, 2, 3, 4, 5] elapsed=3602s
+[19:20:58] waiting ... completed=[1, 2, 3, 4, 5] elapsed=4202s
+[19:30:58] waiting ... completed=[1, 2, 3, 4, 5, 6] elapsed=4802s
+[19:41:00] waiting ... completed=[1, 2, 3, 4, 5, 6] elapsed=5404s
+[19:51:02] waiting ... completed=[1, 2, 3, 4, 5, 6] elapsed=6006s
+[20:01:02] waiting ... completed=[1, 2, 3, 4, 5, 6] elapsed=6606s
+[20:11:02] waiting ... completed=[1, 2, 3, 4, 5, 6] elapsed=7206s
+[20:21:02] waiting ... completed=[1, 2, 3, 4, 5, 6] elapsed=7806s
+[20:31:02] waiting ... completed=[1, 2, 3, 4, 5, 6] elapsed=8406s
+[20:41:02] waiting ... completed=[1, 2, 3, 4, 5, 6] elapsed=9006s
+[20:51:02] waiting ... completed=[1, 2, 3, 4, 5, 6] elapsed=9606s
+[21:01:02] waiting ... completed=[1, 2, 3, 4, 5, 6] elapsed=10206s
+[21:11:02] waiting ... completed=[1, 2, 3, 4, 5, 6] elapsed=10806s
+[21:13:02] checkpoint complete: [1, 2, 3, 4, 5, 6, 7]; settling 90s
+[21:14:32] STEP status: tools/batch_recover.py status
+[21:14:32]   rc=0 0.5s :: 0261114_192947', 'p07_replay_vol209728638_20261114_205504', 'p07_replay_vol209728638_20261114_211043', 'p07_replay_vol63', 'p07_replay_vol63_20261114_170832', 'p07_replay_vol63_20261114_170838', 'p07_replay_vol63_20261114_171402', 'p07_replay_vol63_20261114_175211', 'p07_replay_vol63_20261114_175420', 'ra_0', 'ra_32', 'ra_4', 'readahead_baseline', 'readahead_check', '_guard_probe', '_trunc_probe']
+[21:14:32] STEP verify_engine_plan_batch: tools/verify_engine_plan_batch.py --all-completed
+[21:20:20]   rc=0 347.9s :: exactSha256Match                   truth=fc6458f28d2d engine=fc6458f28d2d |    id=86         exactSha256Match                   truth=8d64ad07c00d engine=8d64ad07c00d |    id=87         exactSha256Match                   truth=b097f6cde57d engine=b097f6cde57d |    id=93         exactSha256Match                   truth=089729feb0c5 engine=089729feb0c5 |    -> batch_007_engine_plan_verification.json
+[21:20:20] STEP verify_engine_batch: tools/verify_engine_batch.py --all-completed
+[21:20:24]   rc=0 4.1s :: batch_001: no anomalies, verification record not needed | batch_002: no anomalies, verification record not needed | batch_003: mismatches=11 corrected=11 retry=1287 effective=105901/105901 OK |    -> D:/dev/PhoenixRecover\docs\reports\real_disk_recovery_2026-11-14\batches\batch_003_engine_verification.json
+[21:20:24] STEP cleanup: tools/batch_recover.py cleanup
+[21:56:23] resume: keeping 3 recorded step(s) ['status', 'verify_engine_plan_batch', 'verify_engine_batch']
+[21:56:24] watcher started; waiting for checkpoint [1, 2, 3, 4, 5, 6, 7] (timeout=120s)
+[21:56:24] checkpoint complete: [1, 2, 3, 4, 5, 6, 7]; settling 0s
+[21:56:24] STEP status: already rc=0 earlier; skipping
+[21:56:24] STEP verify_engine_plan_batch: already rc=0 earlier; skipping
+[21:56:24] STEP verify_engine_batch: already rc=0 earlier; skipping
+[21:57:13] STEP cleanup: DEFERRED (844245 shells / 495571429 bytes)
+[21:57:13] STEP forensic_verify: tools/forensic_baseline.py --verify
+[21:57:14]   rc=0 0.9s :: MiB_LDM_DB         LBA=1953523120   1048576  bytes sha256=6824cf1addc54742 | [ OK ] PART0_BOOT_LBA63         LBA=63           4096     bytes sha256=a02fdc73a163b8f6 | [ OK ] PART1_BOOT_LBA209728575  LBA=209728575    4096     bytes sha256=1bfb56c23ec2869a |  | === VERIFY === | { |   "identityUnchanged": true, |   "samplesCompared": 7, |   "changed": [], |   "conclusion": "SOURCE DISK UNCHANGED" | }
+[21:57:14] STEP verify_archive: tools/verify_archive.py
+[21:58:04]   rc=0 50.6s :: 20 match=0 rows = 1 failed + 133902 false mismatch + 3 id-collision |   info : batch_007: 307033 zero-byte shells retained until final cleanup |   info : zero-write: SOURCE DISK UNCHANGED @ 2026-11-14T13:57:14.216654Z (7 points, changed=[]) |   info : baseline: 7 sampling points / 0 read failures | report -> D:\dev\PhoenixRecover\docs\reports\real_disk_recovery_2026-11-14\archive_verification.json
+[21:58:04] STEP make_summary: tools/make_summary.py
+[21:58:05]   rc=0 0.3s :: summary -> D:\dev\PhoenixRecover\docs\reports\real_disk_recovery_2026-11-14\summary.md | batches 7/7, matched=743125, mismatched=133934, failed=1289, recall=84.6021%
+[21:58:05] FINALISE OK: ALL 7 BATCHES RECOVERED AND BYTE-VERIFIED; STRICT ARCHIVE GATE PASSED
+[21:58:37] resume: keeping 7 recorded step(s) ['status', 'verify_engine_plan_batch', 'verify_engine_batch', 'cleanup', 'forensic_verify', 'verify_archive', 'make_summary']
+[21:58:37] watcher started; waiting for checkpoint [1, 2, 3, 4, 5, 6, 7] (timeout=120s)
+[21:58:37] checkpoint complete: [1, 2, 3, 4, 5, 6, 7]; settling 0s
+[21:58:37] STEP status: already rc=0 earlier; skipping
+[21:58:37] STEP verify_engine_plan_batch: already rc=0 earlier; skipping
+[21:58:37] STEP verify_engine_batch: already rc=0 earlier; skipping
+[21:59:26] STEP cleanup: DEFERRED (844014 batch shells / 0 bytes; aux probes 18 dirs / 495571429 bytes)
+[21:59:26] STEP forensic_verify: already rc=0 earlier; skipping
+[21:59:26] STEP verify_archive: already rc=0 earlier; skipping
+[21:59:26] STEP make_summary: already rc=0 earlier; skipping
+[21:59:26] FINALISE OK: ALL 7 BATCHES RECOVERED AND BYTE-VERIFIED; STRICT ARCHIVE GATE PASSED
+[23:24:30] already finalised at 2026-11-14T21:59:26; nothing to do
+[23:24:35] resume: keeping 7 recorded step(s) ['status', 'verify_engine_plan_batch', 'verify_engine_batch', 'forensic_verify', 'verify_archive', 'make_summary', 'cleanup']
+[23:24:36] watcher started; waiting for checkpoint [1, 2, 3, 4, 5, 6, 7] (timeout=120s)
+[23:24:36] checkpoint complete: [1, 2, 3, 4, 5, 6, 7]; settling 0s
+[23:24:36] STEP status: already rc=0 earlier; skipping
+[23:24:36] STEP verify_engine_plan_batch: already rc=0 earlier; skipping
+[23:24:36] STEP verify_engine_batch: already rc=0 earlier; skipping
+[23:24:36] STEP cleanup: tools/batch_recover.py cleanup
+[23:24:40]   rc=0 4.1s :: aging_tree() | [23:24:39] cleaned readahead_baseline                                           30 files [native] | [23:24:40] readahead_check still holds 87769129 bytes -> release_staging_tree() | [23:24:40] cleaned readahead_check                                              30 files [native] | [23:24:40] CLEANUP DONE: 22 dirs / 225 files removed / 495571429 bytes released (native=22, fallback=0)
+[23:24:40]   step cleanup now executed for real; DEFERRED cleared
+[23:24:40] STEP forensic_verify: already rc=0 earlier; skipping
+[23:24:40] STEP verify_archive: tools/verify_archive.py
+[23:24:46]   rc=0 6.4s :: |   info : batch_007: 133920 match=0 rows = 1 failed + 133902 false mismatch + 3 id-collision |   info : batch_007: staging tree fully deleted |   info : zero-write: SOURCE DISK UNCHANGED @ 2026-11-14T13:57:14.216654Z (7 points, changed=[]) |   info : baseline: 7 sampling points / 0 read failures | report -> D:\dev\PhoenixRecover\docs\reports\real_disk_recovery_2026-11-14\archive_verification.json
+[23:24:46] STEP make_summary: already rc=0 earlier; skipping
+[23:24:46] FINALISE OK: ALL 7 BATCHES RECOVERED AND BYTE-VERIFIED; STRICT ARCHIVE GATE PASSED
+[23:25:06] resume: keeping 7 recorded step(s) ['status', 'verify_engine_plan_batch', 'verify_engine_batch', 'forensic_verify', 'make_summary', 'cleanup', 'verify_archive']
+[23:25:06] watcher started; waiting for checkpoint [1, 2, 3, 4, 5, 6, 7] (timeout=120s)
+[23:25:06] checkpoint complete: [1, 2, 3, 4, 5, 6, 7]; settling 0s
+[23:25:06] STEP status: already rc=0 earlier; skipping
+[23:25:06] STEP verify_engine_plan_batch: already rc=0 earlier; skipping
+[23:25:06] STEP verify_engine_batch: already rc=0 earlier; skipping
+[23:25:06] STEP cleanup: already rc=0 earlier; skipping
+[23:25:06] STEP forensic_verify: already rc=0 earlier; skipping
+[23:25:06] STEP verify_archive: tools/verify_archive.py
+[23:25:13]   rc=0 6.4s :: |   info : batch_007: 133920 match=0 rows = 1 failed + 133902 false mismatch + 3 id-collision |   info : batch_007: staging tree fully deleted |   info : zero-write: SOURCE DISK UNCHANGED @ 2026-11-14T15:25:06.493227Z (7 points, changed=[]) |   info : baseline: 7 sampling points / 0 read failures | report -> D:\dev\PhoenixRecover\docs\reports\real_disk_recovery_2026-11-14\archive_verification.json
+[23:25:13] STEP make_summary: already rc=0 earlier; skipping
+[23:25:13] FINALISE OK: ALL 7 BATCHES RECOVERED AND BYTE-VERIFIED; STRICT ARCHIVE GATE PASSED
+[23:25:25] already finalised at 2026-11-14T23:25:13; nothing to do

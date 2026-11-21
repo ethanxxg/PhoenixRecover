@@ -1,0 +1,30 @@
+{
+  "date": "2026-11-15",
+  "root": "testdata\\digital-corpora-disk-images",
+  "applied": true,
+  "candidates": [
+    {
+      "path": "testdata\\digital-corpora-disk-images\\circl-2023-wiped\\wiped_disk.dd",
+      "bytes": 281693650944,
+      "reason": "e01-derived",
+      "sources": [
+        "testdata\\digital-corpora-disk-images\\circl-2023-wiped\\wiped_disk.E01"
+      ],
+      "mtime": "2026-06-05 11:45",
+      "src_mtime": "2026-05-29 18:58",
+      "note": "all-zero wiped-disk expansion; do not regenerate"
+    },
+    {
+      "path": "testdata\\digital-corpora-disk-images\\nps-2009-domexusers\\nps-2009-domexusers.xml.old",
+      "bytes": 38251423,
+      "reason": "byte-identical duplicate of testdata\\digital-corpora-disk-images\\nps-2009-domexusers\\nps-2009-domexusers.xml"
+    }
+  ],
+  "freedBytes": 281731902367,
+  "freedHuman": "262.4 GiB",
+  "failed": [],
+  "regenerate": "powershell -File testdata/tools/Expand-EwfToRaw.ps1 -RepoRoot <repo> -Roots digital-corpora-disk-images",
+  "warnings": [
+    "wiped_disk.dd was a zero-fill expansion of a 54 MB E01; regenerating it costs ~262 GiB of writes with no test value."
+  ]
+}

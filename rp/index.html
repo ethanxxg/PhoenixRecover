@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>PhoenixRecover 原型入口</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="index">
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <div class="title">PhoenixRecover</div><div class="ver">v1.0</div>
+      </div>
+      <div class="top-actions">
+        <a class="btn primary" href="p1_location.html">开始</a>
+      </div>
+    </div>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="nav">
+          <div class="nav-group">数据恢复</div>
+          <a href="p1_location.html" data-page="p1">P1 位置选择</a>
+          <a href="p2_scanning.html" data-page="p2">P2 扫描中</a>
+          <a href="p3_results.html" data-page="p3">P3 结果&预览</a>
+          <a href="p4_target.html" data-page="p4">P4 恢复目标</a>
+          <a href="p5_complete.html" data-page="p5">P5 完成</a>
+          <div class="nav-group">工具</div>
+          <a href="p6_repair.html" data-page="p6">P6 文件修复</a>
+          <a href="p7_imaging.html" data-page="p7">P7 磁盘镜像</a>
+          <a href="p8_smart.html" data-page="p8">P8 磁盘健康</a>
+        </div>
+        <div class="note">
+          说明：这是静态 HTML 原型，不需要联网。<br/>
+          打开方式：双击本目录的 <b>index.html</b>。
+        </div>
+      </aside>
+
+      <main class="content">
+        <div class="page-title">原型说明</div>
+        <div class="kv">
+          <div class="item"><div class="k">依据</div><div class="v">PRD_PhoenixRecover.md</div></div>
+          <div class="item"><div class="k">流程</div><div class="v">P1→P5 恢复 · P6 修复 · P7 镜像 · P8 健康</div></div>
+          <div class="item"><div class="k">对标</div><div class="v">EaseUS</div></div>
+          <div class="item"><div class="k">目的</div><div class="v">交互评审 / 迭代</div></div>
+        </div>
+
+        <div class="section">
+          <h3>快速开始</h3>
+          <div class="row">
+            <a class="btn primary" href="p1_location.html">从 P1 开始（推荐）</a>
+            <a class="btn" href="p3_results.html">直接查看结果页</a>
+          </div>
+          <div class="row" style="margin-top:10px">
+            <a class="btn" href="p6_repair.html">P6 文件修复</a>
+            <a class="btn" href="p7_imaging.html">P7 磁盘镜像</a>
+            <a class="btn" href="p8_smart.html">P8 磁盘健康</a>
+          </div>
+          <div class="note">
+            在 P1 选择“扫描目标”后点击“开始扫描”，P2 会播放扫描动画，完成后自动跳转到 P3 结果页。
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+

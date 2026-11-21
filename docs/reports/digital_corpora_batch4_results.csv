@@ -1,0 +1,11 @@
+dataset,rel_path,format,size_bytes,open_ok,read_ok,fs_type,file_count,active_count,deleted_count,recoverable,recover_ok,recover_failed,recover_skipped,result,duration_sec,notes
+nps-2014-usb-nondeterministic,..\..\..\testdata\digital-corpora-disk-images\nps-2014-usb-nondeterministic\linux-dc3dd-second.dd,.dd,1009778688,yes,yes,,0,0,0,0,0,0,0,SMOKE_ONLY,0.005,no supported FS; sector0=unknown
+nps-2014-usb-nondeterministic,..\..\..\testdata\digital-corpora-disk-images\nps-2014-usb-nondeterministic\windows-ftkimager-first.dd,.dd,1009778688,yes,yes,,0,0,0,0,0,0,0,SMOKE_ONLY,0.004,no supported FS; sector0=unknown
+nps-2014-usb-nondeterministic,..\..\..\testdata\digital-corpora-disk-images\nps-2014-usb-nondeterministic\windows-ftkimager-second.dd,.dd,1009778688,yes,yes,,0,0,0,0,0,0,0,SMOKE_ONLY,0.004,no supported FS; sector0=unknown
+nps-2009-hfsjtest1,nps-2009-hfsjtest1\image.gen0.dmg,.dmg,10485760,,,,0,0,0,0,0,0,0,UNSUPPORTED,0.000,SectorReader raw-only; convert or use AFF/EWF tools
+nps-2009-hfsjtest1,nps-2009-hfsjtest1\image.gen1.dmg,.dmg,10485760,,,,0,0,0,0,0,0,0,UNSUPPORTED,0.000,SectorReader raw-only; convert or use AFF/EWF tools
+nps-2009-ntfs1,nps-2009-ntfs1\ntfs1-gen0.aff,.aff,277228,,,,0,0,0,0,0,0,0,UNSUPPORTED,0.000,SectorReader raw-only; convert or use AFF/EWF tools
+nps-2009-ntfs1,nps-2009-ntfs1\ntfs1-gen1.aff,.aff,8481452,,,,0,0,0,0,0,0,0,UNSUPPORTED,0.000,SectorReader raw-only; convert or use AFF/EWF tools
+nps-2009-ubnist1,nps-2009-ubnist1\ubnist1.gen0.aff,.aff,725408916,,,,0,0,0,0,0,0,0,UNSUPPORTED,0.000,SectorReader raw-only; convert or use AFF/EWF tools
+nps-2009-ubnist1,nps-2009-ubnist1\ubnist1.gen3.001,.001,536870912,,,,0,0,0,0,0,0,0,UNSUPPORTED,0.000,SectorReader raw-only; convert or use AFF/EWF tools
+nps-2009-ubnist1,nps-2009-ubnist1\ubnist1.gen3.aff,.aff,890164681,,,,0,0,0,0,0,0,0,UNSUPPORTED,0.000,SectorReader raw-only; convert or use AFF/EWF tools

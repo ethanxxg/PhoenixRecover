@@ -1,0 +1,85 @@
+{
+  "status": "OK",
+  "startedAt": "2026-11-14T18:10:27",
+  "expectedBatches": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "steps": [
+    {
+      "name": "status",
+      "severity": "critical",
+      "returnCode": 0,
+      "seconds": 0.5,
+      "timestamp": "2026-11-14T21:14:32",
+      "outputTail": "[21:14:32] batches 7/7 (merged plans), totals={\"files\": 743125, \"bytes\": 137044227602, \"matched\": 743125, \"mismatched\": 133934, \"failed\": 1289}\n[21:14:32] staging dirs still present: ['batch_003', 'batch_003_retry', 'batch_004', 'batch_004_stale', 'batch_005', 'batch_006', 'batch_007', 'p07_gap78', 'p07_replay_vol209728638_20261114_174618', 'p07_replay_vol209728638_20261114_174639', 'p07_replay_vol209728638_20261114_175115', 'p07_replay_vol209728638_20261114_175656', 'p07_replay_vol209728638_20261114_192927', 'p07_replay_vol209728638_20261114_192947', 'p07_replay_vol209728638_20261114_205504', 'p07_replay_vol209728638_20261114_211043', 'p07_replay_vol63', 'p07_replay_vol63_20261114_170832', 'p07_replay_vol63_20261114_170838', 'p07_replay_vol63_20261114_171402', 'p07_replay_vol63_20261114_175211', 'p07_replay_vol63_20261114_175420', 'ra_0', 'ra_32', 'ra_4', 'readahead_baseline', 'readahead_check', '_guard_probe', '_trunc_probe']"
+    },
+    {
+      "name": "verify_engine_plan_batch",
+      "severity": "critical",
+      "returnCode": 0,
+      "seconds": 347.9,
+      "timestamp": "2026-11-14T21:20:20",
+      "outputTail": "949ccf1b21 engine=70949ccf1b21\n   id=447384     exactSha256Match                   truth=61083fbd76c6 engine=61083fbd76c6\n   id=447387     exactSha256Match                   truth=0c437a9f8110 engine=0c437a9f8110\n   -> batch_005_engine_plan_verification.json\nbatch_006: requested=206135 direct=206119 explained=16 effective=206135/206135 unresolved=0 OK\n   id=443715     exactSha256Match                   truth=551c5f916f7b engine=551c5f916f7b\n   id=443735     exactSha256Match                   truth=a2ea27a54ecf engine=a2ea27a54ecf\n   id=443749     exactSha256Match                   truth=22b6f21e310b engine=22b6f21e310b\n   id=443762     exactSha256Match                   truth=fdb997de6a63 engine=fdb997de6a63\n   id=447382     exactSha256Match                   truth=6fa91cdb7ef3 engine=6fa91cdb7ef3\n   id=448774     exactSha256Match                   truth=4255863f1e93 engine=4255863f1e93\n   id=702054     exactSha256Match                   truth=2d2abbbf103f engine=2d2abbbf103f\n   id=702056     exactSha256Match                   truth=1ba2f6f39f70 engine=1ba2f6f39f70\n   -> batch_006_engine_plan_verification.json\nbatch_007: requested=307030 direct=173113 explained=133917 effective=307030/307030 unresolved=0 OK\n   id=43         exactSha256Match                   truth=e1b9ce9b5795 engine=e1b9ce9b5795\n   id=78         exactSha256Match                   truth=f97bf5a9ed23 engine=f97bf5a9ed23\n   id=80         exactSha256Match                   truth=db84b9a626be engine=db84b9a626be\n   id=82         exactSha256Match                   truth=1f819c7c1bf2 engine=1f819c7c1bf2\n   id=84         exactSha256Match                   truth=fc6458f28d2d engine=fc6458f28d2d\n   id=86         exactSha256Match                   truth=8d64ad07c00d engine=8d64ad07c00d\n   id=87         exactSha256Match                   truth=b097f6cde57d engine=b097f6cde57d\n   id=93         exactSha256Match                   truth=089729feb0c5 engine=089729feb0c5\n   -> batch_007_engine_plan_verification.json"
+    },
+    {
+      "name": "verify_engine_batch",
+      "severity": "critical",
+      "returnCode": 0,
+      "seconds": 4.1,
+      "timestamp": "2026-11-14T21:20:24",
+      "outputTail": "batch_001: no anomalies, verification record not needed\nbatch_002: no anomalies, verification record not needed\nbatch_003: mismatches=11 corrected=11 retry=1287 effective=105901/105901 OK\n   -> D:/dev/PhoenixRecover\\docs\\reports\\real_disk_recovery_2026-11-14\\batches\\batch_003_engine_verification.json"
+    },
+    {
+      "name": "cleanup",
+      "severity": "warning",
+      "returnCode": 0,
+      "seconds": 4.1,
+      "timestamp": "2026-11-14T23:24:40",
+      "outputTail": "209728638_20261114_192927                      0 files [native]\n[23:24:37] cleaned p07_replay_vol209728638_20261114_192947                      6 files [native]\n[23:24:37] cleaned p07_replay_vol209728638_20261114_205504                      0 files [native]\n[23:24:37] cleaned p07_replay_vol209728638_20261114_211043                      14 files [native]\n[23:24:37] cleaned p07_replay_vol209728638_20261114_211440                      26 files [native]\n[23:24:37] cleaned p07_replay_vol63_20261114_170832                             0 files [native]\n[23:24:37] cleaned p07_replay_vol63_20261114_170838                             2 files [native]\n[23:24:37] cleaned p07_replay_vol63_20261114_171402                             2 files [native]\n[23:24:38] cleaned p07_replay_vol63_20261114_175211                             2 files [native]\n[23:24:38] cleaned p07_replay_vol63_20261114_175420                             2 files [native]\n[23:24:38] cleaned p07_replay_vol63_20261114_211440                             2 files [native]\n[23:24:38] ra_0 still holds 87769129 bytes -> release_staging_tree()\n[23:24:38] cleaned ra_0                                                         30 files [native]\n[23:24:38] ra_32 still holds 87769129 bytes -> release_staging_tree()\n[23:24:39] cleaned ra_32                                                        30 files [native]\n[23:24:39] ra_4 still holds 87769129 bytes -> release_staging_tree()\n[23:24:39] cleaned ra_4                                                         30 files [native]\n[23:24:39] readahead_baseline still holds 87769129 bytes -> release_staging_tree()\n[23:24:39] cleaned readahead_baseline                                           30 files [native]\n[23:24:40] readahead_check still holds 87769129 bytes -> release_staging_tree()\n[23:24:40] cleaned readahead_check                                              30 files [native]\n[23:24:40] CLEANUP DONE: 22 dirs / 225 files removed / 495571429 bytes released (native=22, fallback=0)"
+    },
+    {
+      "name": "forensic_verify",
+      "severity": "critical",
+      "returnCode": 0,
+      "seconds": 0.9,
+      "timestamp": "2026-11-14T21:57:14",
+      "outputTail": "[ OK ] LBA0_MBR                 LBA=0            512      bytes sha256=4ede65e677ab1001\n[ OK ] LBA1_GPT_or_PRIVHEAD     LBA=1            512      bytes sha256=076a27c79e5ace2a\n[ OK ] LBA2_GPT_entries         LBA=2            4096     bytes sha256=4dd01fab45a65f9b\n[ OK ] HEAD_64_SECTORS          LBA=0            32768    bytes sha256=0b0e7b78a1ffb224\n[ OK ] TAIL_1MiB_LDM_DB         LBA=1953523120   1048576  bytes sha256=6824cf1addc54742\n[ OK ] PART0_BOOT_LBA63         LBA=63           4096     bytes sha256=a02fdc73a163b8f6\n[ OK ] PART1_BOOT_LBA209728575  LBA=209728575    4096     bytes sha256=1bfb56c23ec2869a\n\n=== VERIFY ===\n{\n  \"identityUnchanged\": true,\n  \"samplesCompared\": 7,\n  \"changed\": [],\n  \"conclusion\": \"SOURCE DISK UNCHANGED\"\n}"
+    },
+    {
+      "name": "verify_archive",
+      "severity": "critical",
+      "returnCode": 0,
+      "seconds": 6.4,
+      "timestamp": "2026-11-14T23:25:13",
+      "outputTail": "red 2 incl. 0 duplicate rows), classifications={\"exactSha256Match\": 2}\n  info : batch_004: missingOracle=1 explained by engine-plan byte verification (engine-only ADS nodes have no row in the historical oracle candidate CSV)\n  info : batch_004: 2 match=0 rows = 1 failed + 0 false mismatch + 0 id-collision\n  info : batch_004: staging tree fully deleted\n  info : batch_005: engine-plan anomalies explained -> 249455/249455 distinct ids (declared 249456 incl. 1 duplicate rows), classifications={\"exactSha256Match\": 17}\n  info : batch_005: missingOracle=6 explained by engine-plan byte verification (engine-only ADS nodes have no row in the historical oracle candidate CSV)\n  info : batch_005: 21 match=0 rows = 0 failed + 11 false mismatch + 4 id-collision\n  info : batch_005: staging tree fully deleted\n  info : batch_006: engine-plan anomalies explained -> 206135/206135 distinct ids (declared 206135 incl. 0 duplicate rows), classifications={\"exactSha256Match\": 16}\n  info : batch_006: missingOracle=6 explained by engine-plan byte verification (engine-only ADS nodes have no row in the historical oracle candidate CSV)\n  info : batch_006: 16 match=0 rows = 0 failed + 10 false mismatch + 0 id-collision\n  info : batch_006: staging tree fully deleted\n  info : batch_007: engine-plan anomalies explained -> 307030/307030 distinct ids (declared 307031 incl. 1 duplicate rows), classifications={\"exactSha256Match\": 133916, \"noPayloadDeletedExtension\": 1}\n  info : batch_007: missingOracle=14 explained by engine-plan byte verification (engine-only ADS nodes have no row in the historical oracle candidate CSV)\n  info : batch_007: 133920 match=0 rows = 1 failed + 133902 false mismatch + 3 id-collision\n  info : batch_007: staging tree fully deleted\n  info : zero-write: SOURCE DISK UNCHANGED @ 2026-11-14T15:25:06.493227Z (7 points, changed=[])\n  info : baseline: 7 sampling points / 0 read failures\nreport -> D:\\dev\\PhoenixRecover\\docs\\reports\\real_disk_recovery_2026-11-14\\archive_verification.json"
+    },
+    {
+      "name": "make_summary",
+      "severity": "critical",
+      "returnCode": 0,
+      "seconds": 0.3,
+      "timestamp": "2026-11-14T21:58:05",
+      "outputTail": "summary -> D:\\dev\\PhoenixRecover\\docs\\reports\\real_disk_recovery_2026-11-14\\summary.md\nbatches 7/7, matched=743125, mismatched=133934, failed=1289, recall=84.6021%"
+    }
+  ],
+  "sourceDiskWriteOperations": 0,
+  "checkpointAt": "2026-11-14T23:25:06",
+  "checkpointCompleted": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "deferred": [],
+  "finishedAt": "2026-11-14T23:25:13",
+  "conclusion": "ALL 7 BATCHES RECOVERED AND BYTE-VERIFIED; STRICT ARCHIVE GATE PASSED"
+}

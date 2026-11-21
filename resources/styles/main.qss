@@ -1,0 +1,182 @@
+/* PhoenixRecover Main Stylesheet
+ * Light theme (default) - Dark theme variant to be added later.
+ */
+
+/* === Global === */
+QWidget {
+    font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+    font-size: 13px;
+    color: #111827;
+}
+
+/* === Tree Views === */
+QTreeWidget, QTableWidget, QTableView {
+    border: none;
+    background: #ffffff;
+    alternate-background-color: #f8fafc;
+    gridline-color: #eef2f7;
+    outline: none;
+}
+
+QTreeWidget::item {
+    height: 28px;
+    padding: 4px 2px 4px 0px;
+    color: #374151;
+    border-radius: 10px;
+}
+
+QTreeWidget::item:hover {
+    background: #f3f4f6;
+}
+
+QTreeWidget::item:selected {
+    background: #e6f7ff;
+    color: #22c55e;
+    border-radius: 10px;
+    font-weight: 800;
+}
+
+/* === Checkbox indicators === */
+QTreeWidget::indicator,
+QTableWidget::indicator,
+QTableView::indicator {
+    width: 16px;
+    height: 16px;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    background: #ffffff;
+}
+
+QTreeWidget::indicator:unchecked:hover,
+QTableWidget::indicator:unchecked:hover,
+QTableView::indicator:unchecked:hover {
+    border-color: #16a34a;
+    background: #ffffff;
+}
+
+QTreeWidget::indicator:checked,
+QTableWidget::indicator:checked,
+QTableView::indicator:checked {
+    border: 1px solid #16a34a;
+    border-radius: 4px;
+    background: #16a34a;
+}
+
+/* === Header === */
+QHeaderView::section {
+    background: #f8fafc;
+    color: #6b7280;
+    border: none;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 11px 14px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+/* === Scrollbar === */
+QScrollBar:vertical {
+    width: 10px;
+    background: transparent;
+    margin: 4px 0 4px 0;
+}
+
+QScrollBar::handle:vertical {
+    background: #d1d5db;
+    border-radius: 5px;
+    min-height: 28px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #9ca3af;
+}
+
+QScrollBar::add-line:vertical,
+QScrollBar::sub-line:vertical,
+QScrollBar::add-page:vertical,
+QScrollBar::sub-page:vertical {
+    height: 0;
+    background: transparent;
+}
+
+/* === Tab bar === */
+QTabBar::tab {
+    padding: 12px 2px 11px 2px;
+    margin-right: 22px;
+    color: #9ca3af;
+    font-size: 13px;
+    border-bottom: 2px solid transparent;
+}
+
+QTabBar::tab:selected {
+    color: #16a34a;
+    font-weight: 800;
+    border-bottom-color: #16a34a;
+}
+
+QTabWidget::pane {
+    border: none;
+    top: -1px;
+}
+
+/* === Progress bar === */
+QProgressBar {
+    border: none;
+    background: #e7edf3;
+    border-radius: 5px;
+    padding: 0px;
+    margin: 2px 0 0 0;
+}
+
+QProgressBar::chunk {
+    background: #22c55e;
+    border: none;
+    border-radius: 5px;
+    margin: 0px;
+}
+
+/* === Buttons === */
+QPushButton#primaryBtn {
+    background: #16a34a;
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 0 20px;
+}
+
+QPushButton#primaryBtn:hover {
+    background: #15803d;
+}
+
+QPushButton#primaryBtn:disabled {
+    background: #bbf7d0;
+    color: #ffffff;
+}
+
+QPushButton#secondaryBtn {
+    background: #ffffff;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 0 14px;
+}
+
+QPushButton#secondaryBtn:hover {
+    background: #f9fafb;
+}
+
+/* === Line Edit === */
+QLineEdit {
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 0 12px;
+    background: #ffffff;
+    color: #111827;
+}
+
+QLineEdit:focus {
+    border-color: #86efac;
+}

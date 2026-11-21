@@ -1,0 +1,5 @@
+#pragma once
+
+#ifndef PHOENIX_VERSION_STRING
+#define PHOENIX_VERSION_STRING "1.0.0.20260527"
+#endif

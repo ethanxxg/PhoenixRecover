@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>P7 磁盘镜像 - PhoenixRecover 原型</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="p7">
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <div class="title">PhoenixRecover</div><div class="ver">v1.0</div>
+      </div>
+      <div class="top-actions">
+        <a class="btn" href="index.html">原型入口</a>
+      </div>
+    </div>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="nav">
+          <div class="nav-group">数据恢复</div>
+          <a href="p1_location.html" data-page="p1">数据恢复</a>
+          <div class="nav-group">工具</div>
+          <a href="p6_repair.html" data-page="p6">文件修复</a>
+          <a class="active" href="p7_imaging.html" data-page="p7">磁盘镜像</a>
+          <a href="p8_smart.html" data-page="p8">磁盘健康</a>
+        </div>
+      </aside>
+
+      <main class="content">
+        <div class="page-title">磁盘镜像</div>
+        <div class="note">创建磁盘的完整镜像副本，用于安全地进行数据恢复或取证分析。</div>
+
+        <div class="section">
+          <h3>选择源磁盘</h3>
+          <div class="card-grid">
+            <div class="card selected" data-img-src="disk0">
+              <div class="icon">💻</div>
+              <div class="meta">
+                <div class="name"><span class="disk-letter">C:</span></div>
+                <div class="sub">本地磁盘 · NTFS</div>
+                <div class="mini" style="margin-top:4px">500 GB</div>
+              </div>
+            </div>
+            <div class="card" data-img-src="disk1">
+              <div class="icon">💻</div>
+              <div class="meta">
+                <div class="name"><span class="disk-letter">D:</span></div>
+                <div class="sub">数据盘 · NTFS</div>
+                <div class="mini" style="margin-top:4px">1 TB</div>
+              </div>
+            </div>
+            <div class="card" data-img-src="disk2">
+              <div class="icon">🔌</div>
+              <div class="meta">
+                <div class="name"><span class="disk-letter">E:</span></div>
+                <div class="sub">外部设备 · exFAT</div>
+                <div class="mini" style="margin-top:4px">2 TB</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>保存路径</h3>
+          <div class="row" style="gap:10px;flex-wrap:wrap">
+            <input id="imgSavePath" style="height:38px;border-radius:10px;border:1px solid #d1d5db;padding:0 12px;min-width:380px"
+                   value="D:\Backups\disk_image_2026-05-26.img" />
+            <a class="btn" href="#" onclick="alert('原型占位：选择保存路径');return false;">选择路径...</a>
+          </div>
+          <div class="note">镜像文件将保存为 .img 格式，请确保目标磁盘有足够空间。</div>
+        </div>
+
+        <div class="section hidden" id="imgProgress">
+          <h3>镜像进度</h3>
+          <div style="height:8px;border-radius:999px;background:#e5e7eb;overflow:hidden;border:1px solid #e6eaf2;margin-bottom:12px">
+            <div id="imgProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--primary),#7c3aed);transition:width .3s"></div>
+          </div>
+          <div class="kv" style="grid-template-columns:1fr 1fr 1fr 1fr">
+            <div class="item"><div class="k">进度</div><div class="v" id="imgPercent">0%</div></div>
+            <div class="item"><div class="k">已复制</div><div class="v" id="imgCopied">0 GB</div></div>
+            <div class="item"><div class="k">速度</div><div class="v" id="imgSpeed">0 MB/s</div></div>
+            <div class="item"><div class="k">剩余时间</div><div class="v" id="imgETA">计算中...</div></div>
+          </div>
+        </div>
+
+        <div class="section hidden" id="imgComplete">
+          <h3>镜像完成</h3>
+          <div class="kv" style="grid-template-columns:1fr 1fr 1fr">
+            <div class="item"><div class="k">状态</div><div class="v" style="color:var(--success)">✓ 完成</div></div>
+            <div class="item"><div class="k">镜像大小</div><div class="v">465.8 GB</div></div>
+            <div class="item"><div class="k">用时</div><div class="v">01:23:45</div></div>
+          </div>
+          <div class="note" style="margin-top:8px">SHA-256 校验：e3b0c44298fc1c14...（原型占位）</div>
+        </div>
+
+        <div class="section hidden" id="imgError">
+          <h3>镜像失败</h3>
+          <div class="kv" style="grid-template-columns:1fr 1fr">
+            <div class="item"><div class="k">状态</div><div class="v" style="color:var(--danger)">✗ 错误</div></div>
+            <div class="item"><div class="k">原因</div><div class="v">磁盘 I/O 错误（坏扇区 @ LBA 0x1A2B3C）</div></div>
+          </div>
+          <div class="note" style="margin-top:8px">建议：启用"跳过坏扇区"选项后重试。</div>
+        </div>
+
+        <div class="footer-actions">
+          <button class="btn" id="imgShowError" type="button" style="font-size:12px">模拟错误</button>
+          <button class="btn primary" id="imgStart" type="button">开始镜像</button>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

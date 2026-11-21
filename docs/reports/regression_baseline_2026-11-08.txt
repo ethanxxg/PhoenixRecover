@@ -1,0 +1,118 @@
+Test project D:/dev/PhoenixRecover/build-gcc14
+      Start  1: UtilsNumeric
+ 1/26 Test  #1: UtilsNumeric .........................   Passed    0.02 sec
+      Start  2: UtilsUniquePath
+ 2/26 Test  #2: UtilsUniquePath ......................   Passed    0.02 sec
+      Start  3: FormatPayloadScore
+ 3/26 Test  #3: FormatPayloadScore ...................   Passed    0.02 sec
+      Start  4: FatFragmentStitchSynthetic
+ 4/26 Test  #4: FatFragmentStitchSynthetic ...........   Passed    0.04 sec
+      Start  9: ScanSession_RoundTrip
+ 5/26 Test  #9: ScanSession_RoundTrip ................   Passed    0.04 sec
+      Start 10: FatStructs
+ 6/26 Test #10: FatStructs ...........................   Passed    0.02 sec
+      Start 11: NtfsStructs
+ 7/26 Test #11: NtfsStructs ..........................   Passed    0.02 sec
+      Start 12: CarveCommon
+ 8/26 Test #12: CarveCommon ..........................   Passed    0.02 sec
+      Start 14: ScanProgress
+ 9/26 Test #14: ScanProgress .........................   Passed    0.02 sec
+      Start 15: RecoveryModules_FsTypeRouting
+10/26 Test #15: RecoveryModules_FsTypeRouting ........   Passed    0.02 sec
+      Start 17: UiTypeCoverage
+11/26 Test #17: UiTypeCoverage .......................   Passed    0.02 sec
+      Start 18: SignatureDBAC
+12/26 Test #18: SignatureDBAC ........................   Passed    2.40 sec
+      Start 19: SignatureDBLoad
+13/26 Test #19: SignatureDBLoad ......................   Passed    0.04 sec
+      Start 21: DFTT_FAT_Undelete
+14/26 Test #21: DFTT_FAT_Undelete ....................   Passed    0.03 sec
+      Start 23: DFTT_NTFS_Undelete
+15/26 Test #23: DFTT_NTFS_Undelete ...................   Passed    0.02 sec
+      Start 31: ExfatProbeDispatch
+16/26 Test #31: ExfatProbeDispatch ...................   Passed    0.03 sec
+      Start 38: FragmentFatStructured_QualityGate
+17/26 Test #38: FragmentFatStructured_QualityGate ....   Passed    0.17 sec
+      Start 39: NtfsFragmentStitch_Dispatch
+18/26 Test #39: NtfsFragmentStitch_Dispatch ..........   Passed    0.05 sec
+      Start 41: FragmentNtfsStructured_QualityGate
+19/26 Test #41: FragmentNtfsStructured_QualityGate ...   Passed    0.06 sec
+      Start 49: RawScanAC
+20/26 Test #49: RawScanAC ............................   Passed   11.53 sec
+      Start 50: RawScanFalsePositive
+21/26 Test #50: RawScanFalsePositive .................   Passed    2.94 sec
+      Start 51: DeepScanFallback
+22/26 Test #51: DeepScanFallback .....................   Passed    0.15 sec
+      Start 52: RawScanParallel
+23/26 Test #52: RawScanParallel ......................   Passed    0.42 sec
+      Start 53: RawScanParallelWiring
+24/26 Test #53: RawScanParallelWiring ................   Passed    0.14 sec
+      Start 64: CrashDiagnostics
+25/26 Test #64: CrashDiagnostics .....................   Passed    0.08 sec
+      Start 82: SignatureMatcher
+26/26 Test #82: SignatureMatcher .....................   Passed    0.05 sec
+
+100% tests passed, 0 tests failed out of 26
+
+Total Test time (real) =  18.55 sec
+
+================================================================================
+P0 W1–W5 最终回归（同日追加，覆盖上面的 26 项 bounded 基线）
+================================================================================
+
+构建
+  build-gcc14 : MSYS2 GCC 14.2.0 / PHOENIX_BUILD_GUI=OFF / MinGW Makefiles
+                PATH=/c/msys64/mingw64/bin:$PATH
+                mingw32-make -k -j6  ->  BUILD_EXIT=0 (全量重编译两次，含
+                RecoverEngine.cpp 去 <filesystem> 与 ExfatParser.cpp 修复)
+  build-ac    : Qt MinGW g++ 7.3.0
+                mingw32-make -j4 test_exfat_recover_bytes
+                              test_exfat_probe_dispatch
+                              test_rawscan_false_positive  ->  BUILD_EXIT=0
+                (全量构建仍受该工具链既有 <filesystem> 缺口阻塞)
+
+GCC 14.2 CTest（命令均带 PATH 前缀，否则旧 libstdc++-6.dll 会令
+                std::filesystem 相关 exe 以 0xc0000139 静默退出）
+  fast31  : 31/31 passed, 0 failed, 86.49 sec（中间轮次）
+  final33 : 33/33 passed, 0 failed, 84.92 sec  <== 最终基线
+            含 ExfatProbeDispatch 23 项、ExfatRecoverBytes 30 项、
+            FormattedVolumeRecovery 22 项、RawScanFalsePositive 8 项、
+            A1-6~A1-10 全套、4 个 carving 集成、DFR_Windows_Batch
+  slow1   : FileCarving_Graphic_All 单独复测 --timeout 900
+            1/1 passed, 245.39 sec
+            （240 s 阈值下曾报 Timeout；属阈值过紧，非逻辑失败）
+  DFR batch: DFR_Windows_Batch 1/1 passed, 1.30 sec
+            12/12 PASS；dfr-01-xfat del=1 rec_ok=1、dfr-02-xfat del=1 rec_ok=1
+            —— exFAT 修复后批量恢复计数无回归
+
+GCC 7.3 CTest（build-ac）
+  ctest -R "^(ExfatProbeDispatch|ExfatRecoverBytes|RawScanFalsePositive)$"
+  3/3 passed, 0 failed, 3.14 sec
+
+新增 / 关键门禁
+  ExfatProbeDispatch : 23 checks / 0 failures（双工具链）
+  ExfatRecoverBytes  : 30 checks / 0 failures（双工具链）
+                       恢复 4396 B md5=6650a82d6499770bf7eef8045a014b7d
+                       与独立手写 exFAT oracle 逐字节相等
+                       整镜像 FNV-1a 9989bd85697d640d 前后不变
+  RawScanFalsePositive : 8 checks / 0 failures
+                       Case A 115 FP = 14.38 FP/MiB
+                       Case B TP=16 FP=109 FN=0 / precision 12.80% / recall 100%
+  FormattedVolumeRecovery : 22 checks / 0 failures（双工具链）
+                       4 MiB 合成快速格式化卷（新 boot + 清零 128 KiB 元数据
+                       + 5 个残留载荷）；5/5 偏移命中且雕刻字节前缀与
+                       oracle 一致；空白格式化卷 0 文件；整镜像 FNV-1a 不变。
+                       RAW 共报 59 文件 / 5 植入 ≈ 13.5 FP/MiB，与 W5 吻合。
+
+源码级负向验证（全部按预期 FAIL，随后已恢复源码）
+  W2  断开 exFAT probe           -> ExfatProbeDispatch 3 项 FAIL
+  W3a 重新放开连续流的 FAT 拼接器 -> ExfatRecoverBytes 2 项 FAIL
+      簇链 [2392,2336]，md5=998c2e0c7fb86669368ab9f5b9f932fe
+  W3b 恢复旧 chainNoFat 处理     -> ExfatRecoverBytes 2 项 FAIL
+      rawOffset=0 rawSize=0，md5 同上
+  W3c 关闭 DeepScan RAW 回退     -> FormattedVolumeRecovery 6 项 FAIL
+
+明确排除（非失败，需单独性能 triage）
+  DFTT_FAT_RecoverBytes / DFTT_NTFS_RecoverBytes : 暴力簇重建 >6 min CPU
+  CFReDS 1 GiB 大镜像批量用例   : 未纳入 bounded 基线
+  真实磁盘 / 真实卷端到端        : 未量化

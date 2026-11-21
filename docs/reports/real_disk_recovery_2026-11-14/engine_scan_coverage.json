@@ -1,0 +1,119 @@
+{
+  "generatedBy": "tools/verify_engine_scan.py (recomputed from raw CSV/JSON)",
+  "discoveryEngine": "NtfsParser::ScanMetadata/GetAllFiles",
+  "formatMatcher": "SignatureDB::Match(AC)+FormatPayloadScoreUtil::Score",
+  "candidateSource": "engine",
+  "oracleRole": "independent byte-level verification truth only",
+  "engineSignatureCountsFromLogs": {
+    "engine_scan_vol209728638.log": 513,
+    "engine_scan_vol209728638.log:nodes": 940662,
+    "engine_scan_vol63.log": 513,
+    "engine_scan_vol63.log:nodes": 11134
+  },
+  "volumes": {
+    "63": {
+      "engineDiscoveredUserNodes": 9856,
+      "oracleUserCandidates": 9852,
+      "oracleRole": "independent byte-level verification truth only",
+      "intersection": 9852,
+      "engineOnly": 4,
+      "oracleOnly": 0,
+      "oracleOnlySample": [],
+      "engineFormat": {
+        "userNodes": 9856,
+        "signatureHits": 8765,
+        "prefixReadOk": 9855,
+        "agreement": {
+          "match": 3127,
+          "noSignature": 1090,
+          "mismatch": 3035,
+          "noPayload": 1,
+          "noDeclaredExt": 2603
+        },
+        "probedRows": 9856
+      },
+      "formatMatcher": "SignatureDB::Match(AC)+FormatPayloadScoreUtil::Score"
+    },
+    "209728638": {
+      "engineDiscoveredUserNodes": 869721,
+      "oracleUserCandidates": 869694,
+      "oracleRole": "independent byte-level verification truth only",
+      "intersection": 869694,
+      "engineOnly": 27,
+      "oracleOnly": 0,
+      "oracleOnlySample": [],
+      "engineFormat": {
+        "userNodes": 869729,
+        "signatureHits": 860,
+        "prefixReadOk": 8174,
+        "agreement": {
+          "noPayload": 861555,
+          "noSignature": 7314,
+          "match": 390,
+          "mismatch": 431,
+          "noDeclaredExt": 39
+        },
+        "probedRows": 869729
+      },
+      "formatMatcher": "SignatureDB::Match(AC)+FormatPayloadScoreUtil::Score"
+    }
+  },
+  "batches": [
+    {
+      "batch": 1,
+      "volumeBootLBA": 63,
+      "requestedIds": 9233,
+      "coveredByEngine": 9233,
+      "missingIds": 0,
+      "missingSample": [],
+      "discoveryGate": "PASS"
+    },
+    {
+      "batch": 2,
+      "volumeBootLBA": 63,
+      "requestedIds": 619,
+      "coveredByEngine": 619,
+      "missingIds": 0,
+      "missingSample": [],
+      "discoveryGate": "PASS"
+    },
+    {
+      "batch": 3,
+      "volumeBootLBA": 209728638,
+      "requestedIds": 105901,
+      "coveredByEngine": 105901,
+      "missingIds": 0,
+      "missingSample": [],
+      "discoveryGate": "PASS"
+    },
+    {
+      "batch": 4,
+      "volumeBootLBA": 209728638,
+      "requestedIds": 244040,
+      "coveredByEngine": 244040,
+      "missingIds": 0,
+      "missingSample": [],
+      "discoveryGate": "PASS"
+    },
+    {
+      "batch": 5,
+      "volumeBootLBA": 209728638,
+      "requestedIds": 53715,
+      "coveredByEngine": 53715,
+      "missingIds": 0,
+      "missingSample": [],
+      "discoveryGate": "PASS"
+    },
+    {
+      "batch": 6,
+      "volumeBootLBA": 209728638,
+      "requestedIds": 466038,
+      "coveredByEngine": 466038,
+      "missingIds": 0,
+      "missingSample": [],
+      "discoveryGate": "PASS"
+    }
+  ],
+  "allBatchesCoveredByEngine": true,
+  "conclusion": "ENGINE DISCOVERY COVERS ALL 879546 PLAN IDS"
+}

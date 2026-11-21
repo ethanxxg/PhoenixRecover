@@ -1,0 +1,25 @@
+{
+  "volumeBootLBA": 0,
+  "geometry": {
+    "bytesPerCluster": 4096,
+    "mftLBA": 6291456,
+    "recordSize": 1024,
+    "totalSectors": 209728511
+  },
+  "mftRuns": "786432:2816",
+  "recordsParsed": 11139,
+  "recoverableFileCount": 9852,
+  "recoverableBytes": 44431637563,
+  "excludedSystemFiles": 17,
+  "excludedSystemBytes": 2169876433,
+  "inUseFiles": 9812,
+  "deletedFiles": 40,
+  "residentFiles": 489,
+  "compressedFiles": 0,
+  "fragmentedFiles": 785,
+  "maxFileBytes": 12884901888,
+  "deviceIdentity": {
+    "image": "C:/PhoenixImage/v0.img",
+    "mode": "image"
+  }
+}

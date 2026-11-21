@@ -1,0 +1,541 @@
+{
+  "generatedAt": "2026-11-14T23:24:59",
+  "generatedBy": "tools/final_audit.py",
+  "status": "FAIL",
+  "allowPartial": false,
+  "negativeGuard": true,
+  "checks": [
+    {
+      "name": "checkpoint 1..7",
+      "ok": true,
+      "detail": "completed=[1, 2, 3, 4, 5, 6, 7]",
+      "terminal": true
+    },
+    {
+      "name": "finalizer status OK",
+      "ok": true,
+      "detail": "status=OK",
+      "terminal": true
+    },
+    {
+      "name": "finalizer 7 steps",
+      "ok": true,
+      "detail": "steps=7",
+      "terminal": true
+    },
+    {
+      "name": "step status rc=0",
+      "ok": true,
+      "detail": "rc=0",
+      "terminal": false
+    },
+    {
+      "name": "step verify_engine_plan_batch rc=0",
+      "ok": true,
+      "detail": "rc=0",
+      "terminal": false
+    },
+    {
+      "name": "step verify_engine_batch rc=0",
+      "ok": true,
+      "detail": "rc=0",
+      "terminal": false
+    },
+    {
+      "name": "step forensic_verify rc=0",
+      "ok": true,
+      "detail": "rc=0",
+      "terminal": false
+    },
+    {
+      "name": "step make_summary rc=0",
+      "ok": true,
+      "detail": "rc=0",
+      "terminal": false
+    },
+    {
+      "name": "step verify_archive rc=0",
+      "ok": true,
+      "detail": "rc=0",
+      "terminal": false
+    },
+    {
+      "name": "strict archive gate",
+      "ok": true,
+      "detail": "conclusion=ARCHIVE COMPLETE AND VERIFIED errors=0 warnings=0",
+      "terminal": true
+    },
+    {
+      "name": "engine discovery coverage",
+      "ok": true,
+      "detail": "ENGINE DISCOVERY COVERS ALL 879546 PLAN IDS",
+      "terminal": false
+    },
+    {
+      "name": "source disk unchanged",
+      "ok": true,
+      "detail": "SOURCE DISK UNCHANGED changed=[]",
+      "terminal": false
+    },
+    {
+      "name": "batch_001 every requested id verified",
+      "ok": true,
+      "detail": "verified=9233 denom=9233 unique=9233 declared=9233 pendingVerification=False",
+      "terminal": false
+    },
+    {
+      "name": "batch_001 unresolved=0",
+      "ok": true,
+      "detail": "unresolved=0",
+      "terminal": false
+    },
+    {
+      "name": "batch_001 staging released",
+      "ok": true,
+      "detail": "false",
+      "terminal": false
+    },
+    {
+      "name": "batch_002 every requested id verified",
+      "ok": true,
+      "detail": "verified=619 denom=619 unique=619 declared=619 pendingVerification=False",
+      "terminal": false
+    },
+    {
+      "name": "batch_002 unresolved=0",
+      "ok": true,
+      "detail": "unresolved=0",
+      "terminal": false
+    },
+    {
+      "name": "batch_002 staging released",
+      "ok": true,
+      "detail": "false",
+      "terminal": false
+    },
+    {
+      "name": "batch_003 originalStats untouched",
+      "ok": true,
+      "detail": "mismatch",
+      "terminal": false
+    },
+    {
+      "name": "batch_003 every requested id verified",
+      "ok": true,
+      "detail": "verified=105901 denom=105901 unique=105901 declared=105901 pendingVerification=False",
+      "terminal": false
+    },
+    {
+      "name": "batch_003 unresolved=0",
+      "ok": true,
+      "detail": "unresolved=0",
+      "terminal": false
+    },
+    {
+      "name": "batch_003 staging released",
+      "ok": true,
+      "detail": "false",
+      "terminal": false
+    },
+    {
+      "name": "batch_004 requestScope reproducible",
+      "ok": true,
+      "detail": "declared=2 unique=2 lines=2",
+      "terminal": false
+    },
+    {
+      "name": "batch_004 originalStats untouched",
+      "ok": true,
+      "detail": "mismatch",
+      "terminal": false
+    },
+    {
+      "name": "batch_004 volumeBootLBA",
+      "ok": true,
+      "detail": "mismatch",
+      "terminal": false
+    },
+    {
+      "name": "batch_004 zero source writes",
+      "ok": true,
+      "detail": "non-zero",
+      "terminal": false
+    },
+    {
+      "name": "batch_004 every requested id verified",
+      "ok": true,
+      "detail": "verified=2 denom=2 unique=2 declared=2 pendingVerification=False",
+      "terminal": false
+    },
+    {
+      "name": "batch_004 unresolved=0",
+      "ok": true,
+      "detail": "unresolved=0",
+      "terminal": false
+    },
+    {
+      "name": "batch_004 staging released",
+      "ok": true,
+      "detail": "false",
+      "terminal": false
+    },
+    {
+      "name": "batch_004 engine discovery guard",
+      "ok": true,
+      "detail": "covered=2 declared=2",
+      "terminal": false
+    },
+    {
+      "name": "batch_004 engine SignatureDB format match",
+      "ok": true,
+      "detail": "rows=2 matcher=SignatureDB::Match(AC)+FormatPayloadScoreUtil::Score",
+      "terminal": false
+    },
+    {
+      "name": "batch_004 EVERY row signature-classified",
+      "ok": true,
+      "detail": "rows=2 signed=2 engineRows=2",
+      "terminal": false
+    },
+    {
+      "name": "batch_005 requestScope reproducible",
+      "ok": true,
+      "detail": "declared=249456 unique=249455 lines=249456",
+      "terminal": false
+    },
+    {
+      "name": "batch_005 originalStats untouched",
+      "ok": true,
+      "detail": "mismatch",
+      "terminal": false
+    },
+    {
+      "name": "batch_005 volumeBootLBA",
+      "ok": true,
+      "detail": "mismatch",
+      "terminal": false
+    },
+    {
+      "name": "batch_005 zero source writes",
+      "ok": true,
+      "detail": "non-zero",
+      "terminal": false
+    },
+    {
+      "name": "batch_005 every requested id verified",
+      "ok": false,
+      "detail": "verified=249454 denom=249455 unique=249455 declared=249456 pendingVerification=False",
+      "terminal": false
+    },
+    {
+      "name": "batch_005 unresolved=0",
+      "ok": true,
+      "detail": "unresolved=0",
+      "terminal": false
+    },
+    {
+      "name": "batch_005 staging released",
+      "ok": true,
+      "detail": "false",
+      "terminal": false
+    },
+    {
+      "name": "batch_005 engine discovery guard",
+      "ok": true,
+      "detail": "covered=249456 declared=249456",
+      "terminal": false
+    },
+    {
+      "name": "batch_005 engine SignatureDB format match",
+      "ok": true,
+      "detail": "rows=249459 matcher=SignatureDB::Match(AC)+FormatPayloadScoreUtil::Score",
+      "terminal": false
+    },
+    {
+      "name": "batch_005 EVERY row signature-classified",
+      "ok": true,
+      "detail": "rows=249459 signed=249459 engineRows=249459",
+      "terminal": false
+    },
+    {
+      "name": "batch_006 requestScope reproducible",
+      "ok": true,
+      "detail": "declared=206135 unique=206135 lines=206135",
+      "terminal": false
+    },
+    {
+      "name": "batch_006 originalStats untouched",
+      "ok": true,
+      "detail": "mismatch",
+      "terminal": false
+    },
+    {
+      "name": "batch_006 volumeBootLBA",
+      "ok": true,
+      "detail": "mismatch",
+      "terminal": false
+    },
+    {
+      "name": "batch_006 zero source writes",
+      "ok": true,
+      "detail": "non-zero",
+      "terminal": false
+    },
+    {
+      "name": "batch_006 every requested id verified",
+      "ok": true,
+      "detail": "verified=206135 denom=206135 unique=206135 declared=206135 pendingVerification=False",
+      "terminal": false
+    },
+    {
+      "name": "batch_006 unresolved=0",
+      "ok": true,
+      "detail": "unresolved=0",
+      "terminal": false
+    },
+    {
+      "name": "batch_006 staging released",
+      "ok": true,
+      "detail": "false",
+      "terminal": false
+    },
+    {
+      "name": "batch_006 engine discovery guard",
+      "ok": true,
+      "detail": "covered=206135 declared=206135",
+      "terminal": false
+    },
+    {
+      "name": "batch_006 engine SignatureDB format match",
+      "ok": true,
+      "detail": "rows=206135 matcher=SignatureDB::Match(AC)+FormatPayloadScoreUtil::Score",
+      "terminal": false
+    },
+    {
+      "name": "batch_006 EVERY row signature-classified",
+      "ok": true,
+      "detail": "rows=206135 signed=206135 engineRows=206135",
+      "terminal": false
+    },
+    {
+      "name": "batch_007 requestScope reproducible",
+      "ok": true,
+      "detail": "declared=307031 unique=307030 lines=307031",
+      "terminal": false
+    },
+    {
+      "name": "batch_007 originalStats untouched",
+      "ok": true,
+      "detail": "mismatch",
+      "terminal": false
+    },
+    {
+      "name": "batch_007 volumeBootLBA",
+      "ok": true,
+      "detail": "mismatch",
+      "terminal": false
+    },
+    {
+      "name": "batch_007 zero source writes",
+      "ok": true,
+      "detail": "non-zero",
+      "terminal": false
+    },
+    {
+      "name": "batch_007 every requested id verified",
+      "ok": true,
+      "detail": "verified=307030 denom=307030 unique=307030 declared=307031 pendingVerification=False",
+      "terminal": false
+    },
+    {
+      "name": "batch_007 unresolved=0",
+      "ok": true,
+      "detail": "unresolved=0",
+      "terminal": false
+    },
+    {
+      "name": "batch_007 staging released",
+      "ok": true,
+      "detail": "false",
+      "terminal": false
+    },
+    {
+      "name": "batch_007 engine discovery guard",
+      "ok": true,
+      "detail": "covered=307031 declared=307031",
+      "terminal": false
+    },
+    {
+      "name": "batch_007 engine SignatureDB format match",
+      "ok": true,
+      "detail": "rows=307033 matcher=SignatureDB::Match(AC)+FormatPayloadScoreUtil::Score",
+      "terminal": false
+    },
+    {
+      "name": "batch_007 EVERY row signature-classified",
+      "ok": true,
+      "detail": "rows=307033 signed=307033 engineRows=307033",
+      "terminal": false
+    },
+    {
+      "name": "all batches accounted",
+      "ok": true,
+      "detail": "ran=7",
+      "terminal": false
+    },
+    {
+      "name": "no unresolved anomaly anywhere",
+      "ok": true,
+      "detail": "unresolved=0",
+      "terminal": false
+    },
+    {
+      "name": "effective == distinct request ids",
+      "ok": false,
+      "detail": "878374 vs 878375",
+      "terminal": false
+    }
+  ],
+  "batches": [
+    {
+      "batch": 1,
+      "volumeBootLBA": 63,
+      "declared": 9233,
+      "distinctIds": 9233,
+      "directMatched": 9233,
+      "mismatched": 0,
+      "failed": 0,
+      "missingOracle": 0,
+      "effectiveVerified": 9233,
+      "denominator": 9233,
+      "unresolved": 0,
+      "verificationKind": "direct-match",
+      "engineFormatRows": null,
+      "signatureClassifiedRows": null,
+      "engineResultRows": null,
+      "stagingReleased": true
+    },
+    {
+      "batch": 2,
+      "volumeBootLBA": 63,
+      "declared": 619,
+      "distinctIds": 619,
+      "directMatched": 619,
+      "mismatched": 0,
+      "failed": 0,
+      "missingOracle": 0,
+      "effectiveVerified": 619,
+      "denominator": 619,
+      "unresolved": 0,
+      "verificationKind": "direct-match",
+      "engineFormatRows": null,
+      "signatureClassifiedRows": null,
+      "engineResultRows": null,
+      "stagingReleased": true
+    },
+    {
+      "batch": 3,
+      "volumeBootLBA": 209728638,
+      "declared": 105901,
+      "distinctIds": 105901,
+      "directMatched": 104603,
+      "mismatched": 11,
+      "failed": 1287,
+      "missingOracle": 0,
+      "effectiveVerified": 105901,
+      "denominator": 105901,
+      "unresolved": 0,
+      "verificationKind": "engine-byte-verification",
+      "engineFormatRows": null,
+      "signatureClassifiedRows": null,
+      "engineResultRows": null,
+      "stagingReleased": true
+    },
+    {
+      "batch": 4,
+      "volumeBootLBA": 63,
+      "declared": 2,
+      "distinctIds": 2,
+      "directMatched": 0,
+      "mismatched": 0,
+      "failed": 1,
+      "missingOracle": 1,
+      "effectiveVerified": 2,
+      "denominator": 2,
+      "unresolved": 0,
+      "verificationKind": "engine-plan-byte-verification",
+      "engineFormatRows": 2,
+      "signatureClassifiedRows": 2,
+      "engineResultRows": 2,
+      "stagingReleased": true
+    },
+    {
+      "batch": 5,
+      "volumeBootLBA": 209728638,
+      "declared": 249456,
+      "distinctIds": 249455,
+      "directMatched": 249438,
+      "mismatched": 11,
+      "failed": 0,
+      "missingOracle": 6,
+      "effectiveVerified": 249454,
+      "denominator": 249455,
+      "unresolved": 0,
+      "verificationKind": "engine-plan-byte-verification",
+      "engineFormatRows": 249459,
+      "signatureClassifiedRows": 249459,
+      "engineResultRows": 249459,
+      "stagingReleased": true
+    },
+    {
+      "batch": 6,
+      "volumeBootLBA": 209728638,
+      "declared": 206135,
+      "distinctIds": 206135,
+      "directMatched": 206119,
+      "mismatched": 10,
+      "failed": 0,
+      "missingOracle": 6,
+      "effectiveVerified": 206135,
+      "denominator": 206135,
+      "unresolved": 0,
+      "verificationKind": "engine-plan-byte-verification",
+      "engineFormatRows": 206135,
+      "signatureClassifiedRows": 206135,
+      "engineResultRows": 206135,
+      "stagingReleased": true
+    },
+    {
+      "batch": 7,
+      "volumeBootLBA": 209728638,
+      "declared": 307031,
+      "distinctIds": 307030,
+      "directMatched": 173113,
+      "mismatched": 133902,
+      "failed": 1,
+      "missingOracle": 14,
+      "effectiveVerified": 307030,
+      "denominator": 307030,
+      "unresolved": 0,
+      "verificationKind": "engine-plan-byte-verification",
+      "engineFormatRows": 307033,
+      "signatureClassifiedRows": 307033,
+      "engineResultRows": 307033,
+      "stagingReleased": true
+    }
+  ],
+  "totals": {
+    "batches": 7,
+    "declared": 878377,
+    "distinctIds": 878375,
+    "effectiveVerified": 878374,
+    "unresolved": 0,
+    "signatureClassifiedRows": 762629,
+    "sourceDiskWriteOperations": 0
+  },
+  "conclusion": "FINAL AUDIT FAILED",
+  "errors": [
+    "batch_005 every requested id verified: verified=249454 denom=249455 unique=249455 declared=249456 pendingVerification=False",
+    "effective == distinct request ids: 878374 vs 878375"
+  ]
+}

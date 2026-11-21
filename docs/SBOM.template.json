@@ -1,0 +1,28 @@
+{
+  "bomFormat": "CycloneDX",
+  "specVersion": "1.4",
+  "version": 1,
+  "metadata": {
+    "component": {
+      "type": "application",
+      "name": "PhoenixRecover",
+      "version": "1.0.0.20260527"
+    }
+  },
+  "components": [
+    {
+      "type": "library",
+      "name": "Qt5",
+      "version": "5.14.2",
+      "purl": "pkg:generic/qt@5.14.2",
+      "licenses": [{ "license": { "id": "LGPL-3.0-only" } }]
+    },
+    {
+      "type": "library",
+      "name": "libzip",
+      "version": "OPTIONAL",
+      "licenses": [{ "license": { "id": "BSD-3-Clause" } }],
+      "comment": "仅当 PHOENIX_HAVE_LIBZIP=ON 时链接"
+    }
+  ]
+}

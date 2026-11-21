@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>P1 位置选择 - PhoenixRecover 原型</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="p1">
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <div class="title">PhoenixRecover</div><div class="ver">v1.0</div>
+      </div>
+      <div class="top-actions">
+        <a class="btn" href="index.html">原型入口</a>
+        <a class="btn" href="p3_results.html">跳到结果</a>
+      </div>
+    </div>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="nav">
+          <div class="nav-group">数据恢复</div>
+          <a class="active" href="p1_location.html" data-page="p1">数据恢复</a>
+          <a href="#" onclick="alert('原型占位：外部设备');return false;">外部设备</a>
+          <a href="#" onclick="alert('原型占位：磁盘镜像');return false;">磁盘镜像</a>
+          <a href="#" onclick="alert('原型占位：更多工具');return false;">更多工具</a>
+
+          <div class="nav-group">高级功能</div>
+          <a href="#" onclick="alert('原型占位：磁盘健康');return false;">磁盘健康</a>
+          <a href="#" onclick="alert('原型占位：设置');return false;">设置</a>
+        </div>
+      </aside>
+
+      <main class="content">
+        <div class="page-title">选择恢复位置</div>
+        <div class="note">请选择数据丢失的位置，我们将扫描并找回可恢复的文件。</div>
+
+        <div class="section">
+          <h3>本地磁盘</h3>
+          <div class="card-grid">
+            <div class="card selected" data-target="disk:C:">
+              <div class="icon">💻</div>
+              <div class="meta">
+                <div class="name"><span class="disk-letter">C:</span></div>
+                <div class="sub">本地磁盘</div>
+                <div class="mini">NTFS</div>
+                <div class="bar"><span style="width:48%"></span></div>
+                <div class="mini" style="margin-top:8px">238 / 500 GB</div>
+              </div>
+            </div>
+            <div class="card" data-target="disk:D:">
+              <div class="icon">💻</div>
+              <div class="meta">
+                <div class="name"><span class="disk-letter">D:</span></div>
+                <div class="sub">数据盘</div>
+                <div class="mini">NTFS</div>
+                <div class="bar"><span style="width:71%"></span></div>
+                <div class="mini" style="margin-top:8px">780 GB / 1 TB</div>
+              </div>
+            </div>
+            <div class="card" data-target="disk:E:">
+              <div class="icon">💻</div>
+              <div class="meta">
+                <div class="name"><span class="disk-letter">E:</span></div>
+                <div class="sub">备份盘</div>
+                <div class="mini">exFAT</div>
+                <div class="bar"><span style="width:6%"></span></div>
+                <div class="mini" style="margin-top:8px">120 GB / 2 TB</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>其他位置</h3>
+          <div class="row" style="gap:12px">
+            <div class="btn" style="min-width:160px" data-target="recycle">🗑&nbsp;&nbsp;回收站</div>
+            <div class="btn" style="min-width:160px" data-target="desktop">🖥&nbsp;&nbsp;桌面</div>
+            <div class="btn" style="min-width:160px" data-target="folder">📁&nbsp;&nbsp;选择文件夹</div>
+          </div>
+
+          <div class="start-row">
+            <div class="start-footer">
+              <a class="btn primary btn-lg" id="startScan" href="javascript:void(0)">开始扫描</a>
+              <div class="note" style="margin-top:10px;text-align:center;color:#9ca3af;font-size:12px">PhoenixRecover 将自动执行多阶段扫描（元数据解析 → 深度扫描 → 签名雕刻）</div>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
+

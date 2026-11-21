@@ -1,68 +1,54 @@
-# Prerequisites
-*.d
-
-# Compiled Object files
-*.slo
-*.lo
+# ===== 构建产物 =====
+/build/
+/build-*/
+/dist/
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
 *.o
 *.obj
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Linker files
-*.ilk
-
-# Debugger Files
-*.pdb
-
-# Compiled Dynamic libraries
-*.so
-*.dylib
-*.dll
-*.so.*
-
-# Fortran module files
-*.mod
-*.smod
-
-# Compiled Static libraries
-*.lai
-*.la
-*.a
-*.lib
-
-# Executables
 *.exe
-*.out
-*.app
+*.dll
+*.lib
+*.a
+*.pdb
+*.ilk
+*.exp
+*.idb
+*.tlog
+Debug/
+Release/
+x64/
+*.sln.DotSettings.user
 
-# Build directories
-[Bb]uild/
-[Bb]uild-*/
-cmake-build-*/
+# ===== 测试数据与磁盘镜像（体积极大，获取方式见 testdata/测试镜像说明.md）=====
+/testdata/
+*.dd
+*.img
+*.raw
+*.001
+*.E01
+*.E02
+*.E03
+*.E04
+*.aff
+/recover_staging/
+/PhoenixImage/
+rawscan_*_tmp.*
 
-# CMake generated files
-CMakeFiles/
-CMakeCache.txt
-cmake_install.cmake
-Makefile
-install_manifest.txt
-compile_commands.json
+# ===== 取证证据原始数据（只入库 Markdown 结论，明细 csv/json 保留在本地）=====
+docs/reports/real_disk_recovery_2026-11-14/*.csv
+docs/reports/real_disk_recovery_2026-11-14/plan*.json
+docs/reports/real_disk_recovery_2026-11-14/batches/*.csv
+docs/reports/real_disk_recovery_2026-11-14/batches/*.json
 
-# Temporary files
-*.tmp
-*.log
-*.bak
-*.swp
-
-# vcpkg
-vcpkg_installed/
-
-# debug information files
-*.dwo
-
-# test output & cache
-Testing/
-.cache/
+# ===== 本机 / 编辑器产物 =====
+.workbuddy/
+.vs/
+*.user
+*.suo
+*.autosave
+*.orig
+*.rej
+*.bak_p09
+crash_reports/

@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-11-14T16:21:13",
+  "generatedBy": "tools/verify_engine_fix.py",
+  "purpose": "End-to-end proof that the production engine (P0-7 build) recovers a $ATTRIBUTE_LIST file byte-for-byte.",
+  "gapId": 78,
+  "beforeFixClusterCount": 0,
+  "afterFixClusterCount": 13850,
+  "afterFixFirstCluster": "105193",
+  "engineDeclaredSize": 56725784,
+  "independentTruthSize": 56725784,
+  "independentTruthSha256": "4992458186e62e89a61cffc34b90a99629ad5df80b41d9763a8f62397c9d536c",
+  "expectedSha256Used": "4992458186e62e89a61cffc34b90a99629ad5df80b41d9763a8f62397c9d536c",
+  "engineRecoveredSize": 56725784,
+  "engineRecoveredSha256": "4992458186e62e89a61cffc34b90a99629ad5df80b41d9763a8f62397c9d536c",
+  "engineRecoverStatus": 0,
+  "engineFormatExt": "ini",
+  "engineFormatAgreement": "mismatch",
+  "engineFormatMatcher": "SignatureDB::Match(AC)+FormatPayloadScoreUtil::Score",
+  "sourceDiskWriteOperations": 0,
+  "negativeGuard": false,
+  "errors": [],
+  "verdict": "ENGINE ATTRIBUTE_LIST FIX VERIFIED BYTE-FOR-BYTE"
+}

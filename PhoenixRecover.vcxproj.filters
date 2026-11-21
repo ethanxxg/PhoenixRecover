@@ -1,0 +1,321 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>qml;cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>qrc;rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Form Files">
+      <UniqueIdentifier>{99349809-55BA-4b9d-BF79-8FDBB0286EB3}</UniqueIdentifier>
+      <Extensions>ui</Extensions>
+    </Filter>
+    <Filter Include="Translation Files">
+      <UniqueIdentifier>{639EADAA-A684-42e4-A9AD-28FC9BCB8F7C}</UniqueIdentifier>
+      <Extensions>ts</Extensions>
+    </Filter>
+    <Filter Include="common">
+      <UniqueIdentifier>{b1a3bb29-5d26-4329-91e6-7ee6044e3b8c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="disk">
+      <UniqueIdentifier>{7aafe4a5-f77e-4b7c-9c46-0bd233bbaf39}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs">
+      <UniqueIdentifier>{617f3655-cefc-4806-badd-8a136df9ffdd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="log">
+      <UniqueIdentifier>{d250eba6-dc64-43d3-90cf-ac62d1323e50}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="pages">
+      <UniqueIdentifier>{e13ec315-9d53-4f08-907f-5b04840e27bd}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="recover">
+      <UniqueIdentifier>{ae5c06ec-89f7-455a-9019-48b4d7420a75}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="scan">
+      <UniqueIdentifier>{a168fd2a-8a84-4405-914c-ad9c9911ea96}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs\exfat">
+      <UniqueIdentifier>{9796a301-1d9a-4737-b99d-feba8ec173fc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs\ext4">
+      <UniqueIdentifier>{f7a600fa-3cac-46f1-95a8-b53a2aa7745c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs\fat">
+      <UniqueIdentifier>{c5d71e4b-268c-4cf0-a005-1a1420e5bb5f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="fs\ntfs">
+      <UniqueIdentifier>{18d2a542-cd6e-4330-9109-b733645d5bc6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="scan\carve">
+      <UniqueIdentifier>{093a9d4e-6985-4a0d-8f78-dd568b3df0b4}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="thread">
+      <UniqueIdentifier>{c70d8a23-ce17-439b-9c8b-c98512e439a9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="controllers">
+      <UniqueIdentifier>{0f5122c7-3d4d-4ef1-9a32-c82080116231}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <QtRcc Include="PhoenixRecover.qrc">
+      <Filter>Resource Files</Filter>
+    </QtRcc>
+    <QtUic Include="PhoenixRecover.ui">
+      <Filter>Form Files</Filter>
+    </QtUic>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="common\Constants.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\SysInfo.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\Types.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="common\Utils.h">
+      <Filter>common</Filter>
+    </ClInclude>
+    <ClInclude Include="disk\BadSectorMap.h">
+      <Filter>disk</Filter>
+    </ClInclude>
+    <ClInclude Include="disk\DiskManager.h">
+      <Filter>disk</Filter>
+    </ClInclude>
+    <ClInclude Include="disk\Imager.h">
+      <Filter>disk</Filter>
+    </ClInclude>
+    <ClInclude Include="disk\Partition.h">
+      <Filter>disk</Filter>
+    </ClInclude>
+    <ClInclude Include="disk\PartitionProbe.h">
+      <Filter>disk</Filter>
+    </ClInclude>
+    <ClInclude Include="disk\PhysicalDisk.h">
+      <Filter>disk</Filter>
+    </ClInclude>
+    <ClInclude Include="disk\SectorReader.h">
+      <Filter>disk</Filter>
+    </ClInclude>
+    <ClInclude Include="disk\SmartInfo.h">
+      <Filter>disk</Filter>
+    </ClInclude>
+    <ClInclude Include="fs\FileSystem.h">
+      <Filter>fs</Filter>
+    </ClInclude>
+    <ClInclude Include="fs\exfat\ExfatParser.h">
+      <Filter>fs\exfat</Filter>
+    </ClInclude>
+    <ClInclude Include="fs\exfat\ExfatStructs.h">
+      <Filter>fs\exfat</Filter>
+    </ClInclude>
+    <ClInclude Include="fs\ext4\Ext4Parser.h">
+      <Filter>fs\ext4</Filter>
+    </ClInclude>
+    <ClInclude Include="fs\ext4\Ext4Structs.h">
+      <Filter>fs\ext4</Filter>
+    </ClInclude>
+    <ClInclude Include="fs\fat\FatParser.h">
+      <Filter>fs\fat</Filter>
+    </ClInclude>
+    <ClInclude Include="fs\fat\FatStructs.h">
+      <Filter>fs\fat</Filter>
+    </ClInclude>
+    <ClInclude Include="fs\ntfs\NtfsParser.h">
+      <Filter>fs\ntfs</Filter>
+    </ClInclude>
+    <ClInclude Include="fs\ntfs\NtfsStructs.h">
+      <Filter>fs\ntfs</Filter>
+    </ClInclude>
+    <ClInclude Include="fs\ntfs\UsnJournalParser.h">
+      <Filter>fs\ntfs</Filter>
+    </ClInclude>
+    <ClInclude Include="log\Logger.h">
+      <Filter>log</Filter>
+    </ClInclude>
+    <ClInclude Include="scan\DeepScan.h">
+      <Filter>scan</Filter>
+    </ClInclude>
+    <ClInclude Include="scan\QuickScan.h">
+      <Filter>scan</Filter>
+    </ClInclude>
+    <ClInclude Include="scan\RawScan.h">
+      <Filter>scan</Filter>
+    </ClInclude>
+    <ClInclude Include="scan\ScanEngine.h">
+      <Filter>scan</Filter>
+    </ClInclude>
+    <ClInclude Include="scan\UnifiedVolumeScanner.h">
+      <Filter>scan</Filter>
+    </ClInclude>
+    <ClInclude Include="scan\VolumeSectorScanner.h">
+      <Filter>scan</Filter>
+    </ClInclude>
+    <ClInclude Include="scan\ScanSerializer.h">
+      <Filter>scan</Filter>
+    </ClInclude>
+    <ClInclude Include="scan\SignatureDB.h">
+      <Filter>scan</Filter>
+    </ClInclude>
+    <ClInclude Include="scan\carve\CarveCommon.h">
+      <Filter>scan\carve</Filter>
+    </ClInclude>
+    <ClInclude Include="scan\carve\CarveMp4.h">
+      <Filter>scan\carve</Filter>
+    </ClInclude>
+    <ClInclude Include="scan\carve\CarveZip.h">
+      <Filter>scan\carve</Filter>
+    </ClInclude>
+    <ClInclude Include="recover\FileFilter.h">
+      <Filter>recover</Filter>
+    </ClInclude>
+    <ClInclude Include="recover\FileNode.h">
+      <Filter>recover</Filter>
+    </ClInclude>
+    <ClInclude Include="recover\RecoverEngine.h">
+      <Filter>recover</Filter>
+    </ClInclude>
+    <ClInclude Include="thread\ThreadPool.h">
+      <Filter>thread</Filter>
+    </ClInclude>
+    <ClInclude Include="controllers\ScanTypes.h">
+      <Filter>controllers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="fs\exfat\ExfatParser.cpp">
+      <Filter>fs\exfat</Filter>
+    </ClCompile>
+    <ClCompile Include="fs\ext4\Ext4Parser.cpp">
+      <Filter>fs\ext4</Filter>
+    </ClCompile>
+    <ClCompile Include="fs\fat\FatParser.cpp">
+      <Filter>fs\fat</Filter>
+    </ClCompile>
+    <ClCompile Include="fs\fat\FatStructs.cpp">
+      <Filter>fs\fat</Filter>
+    </ClCompile>
+    <ClCompile Include="fs\ntfs\NtfsParser.cpp">
+      <Filter>fs\ntfs</Filter>
+    </ClCompile>
+    <ClCompile Include="fs\ntfs\UsnJournalParser.cpp">
+      <Filter>fs\ntfs</Filter>
+    </ClCompile>
+    <ClCompile Include="log\Logger.cpp">
+      <Filter>log</Filter>
+    </ClCompile>
+    <ClCompile Include="scan\DeepScan.cpp">
+      <Filter>scan</Filter>
+    </ClCompile>
+    <ClCompile Include="scan\QuickScan.cpp">
+      <Filter>scan</Filter>
+    </ClCompile>
+    <ClCompile Include="scan\RawScan.cpp">
+      <Filter>scan</Filter>
+    </ClCompile>
+    <ClCompile Include="scan\ScanSerializer.cpp">
+      <Filter>scan</Filter>
+    </ClCompile>
+    <ClCompile Include="scan\SignatureDB.cpp">
+      <Filter>scan</Filter>
+    </ClCompile>
+    <ClCompile Include="scan\UnifiedVolumeScanner.cpp">
+      <Filter>scan</Filter>
+    </ClCompile>
+    <ClCompile Include="scan\VolumeSectorScanner.cpp">
+      <Filter>scan</Filter>
+    </ClCompile>
+    <ClCompile Include="scan\carve\CarveMp4.cpp">
+      <Filter>scan\carve</Filter>
+    </ClCompile>
+    <ClCompile Include="scan\carve\CarveZip.cpp">
+      <Filter>scan\carve</Filter>
+    </ClCompile>
+    <ClCompile Include="pages\MoreRecoveryToolsPage.cpp">
+      <Filter>pages</Filter>
+    </ClCompile>
+    <ClCompile Include="pages\RecoveryLocationPage.cpp">
+      <Filter>pages</Filter>
+    </ClCompile>
+    <ClCompile Include="pages\RecoveryScanPage.cpp">
+      <Filter>pages</Filter>
+    </ClCompile>
+    <ClCompile Include="pages\SDCardConnectionPage.cpp">
+      <Filter>pages</Filter>
+    </ClCompile>
+    <ClCompile Include="recover\RecoverEngine.cpp">
+      <Filter>recover</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="PhoenixRecover.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="controllers\RecoveryFlowController.cpp">
+      <Filter>controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="controllers\RecoveryScanController.cpp">
+      <Filter>controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="controllers\RecoveryScanWorker.cpp">
+      <Filter>controllers</Filter>
+    </ClCompile>
+    <ClCompile Include="disk\DiskManager_win.cpp">
+      <Filter>disk</Filter>
+    </ClCompile>
+    <ClCompile Include="disk\Imager.cpp">
+      <Filter>disk</Filter>
+    </ClCompile>
+    <ClCompile Include="disk\PartitionProbe.cpp">
+      <Filter>disk</Filter>
+    </ClCompile>
+    <ClCompile Include="disk\SectorReader_win.cpp">
+      <Filter>disk</Filter>
+    </ClCompile>
+    <ClCompile Include="disk\SmartInfo.cpp">
+      <Filter>disk</Filter>
+    </ClCompile>
+    <ClCompile Include="common\SysInfo.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+    <ClCompile Include="common\Utils.cpp">
+      <Filter>common</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="pages\MoreRecoveryToolsPage.h">
+      <Filter>pages</Filter>
+    </QtMoc>
+    <QtMoc Include="pages\RecoveryLocationPage.h">
+      <Filter>pages</Filter>
+    </QtMoc>
+    <QtMoc Include="pages\RecoveryScanPage.h">
+      <Filter>pages</Filter>
+    </QtMoc>
+    <QtMoc Include="pages\SDCardConnectionPage.h">
+      <Filter>pages</Filter>
+    </QtMoc>
+    <QtMoc Include="PhoenixRecover.h">
+      <Filter>Source Files</Filter>
+    </QtMoc>
+    <QtMoc Include="controllers\RecoveryFlowController.h">
+      <Filter>controllers</Filter>
+    </QtMoc>
+    <QtMoc Include="controllers\RecoveryScanController.h">
+      <Filter>controllers</Filter>
+    </QtMoc>
+    <QtMoc Include="controllers\RecoveryScanWorker.h">
+      <Filter>controllers</Filter>
+    </QtMoc>
+  </ItemGroup>
+</Project>

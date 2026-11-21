@@ -1,0 +1,31 @@
+{
+  "volumeBootLBA": 63,
+  "geometry": {
+    "bytesPerCluster": 4096,
+    "mftLBA": 6291519,
+    "recordSize": 1024,
+    "totalSectors": 209728511
+  },
+  "mftRuns": "786432:2816",
+  "recordsParsed": 11139,
+  "recoverableFileCount": 9852,
+  "recoverableBytes": 44431637563,
+  "excludedSystemFiles": 20,
+  "excludedSystemBytes": 109554151249,
+  "inUseFiles": 9812,
+  "deletedFiles": 40,
+  "residentFiles": 489,
+  "compressedFiles": 0,
+  "fragmentedFiles": 785,
+  "maxFileBytes": 12884901888,
+  "deviceIdentity": {
+    "index": 2,
+    "deviceId": "\\\\.\\PHYSICALDRIVE2",
+    "model": "ST1000DM 003-1CH162 SCSI Disk Device",
+    "serialNumber": "0AD132601218",
+    "sizeBytes": 1000202273280,
+    "partitions": 2,
+    "status": "OK",
+    "interfaceType": "SCSI"
+  }
+}

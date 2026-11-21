@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PhoenixRecover · UI Redesign v2</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --surface: #ffffff;
+      --surface-soft: #f8fafc;
+      --line: #e5eaf1;
+      --line-strong: #d7dee9;
+      --text: #172033;
+      --muted: #718096;
+      --muted-2: #9aa7b8;
+      --brand: #2563eb;
+      --brand-dark: #1d4ed8;
+      --brand-soft: #eff6ff;
+      --success: #16a34a;
+      --success-soft: #ecfdf3;
+      --warning: #d97706;
+      --warning-soft: #fff7ed;
+      --danger: #dc2626;
+      --shadow: 0 18px 60px rgba(35, 55, 85, .09);
+      --shadow-soft: 0 6px 22px rgba(35, 55, 85, .07);
+      --radius-xl: 24px;
+      --radius-lg: 16px;
+      --radius-md: 12px;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-width: 1080px;
+      color: var(--text);
+      background: var(--bg);
+      font: 14px/1.55 Inter, "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+
+    .app { min-height: 100vh; display: flex; flex-direction: column; }
+    .topbar {
+      height: 72px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 42px;
+      background: rgba(255,255,255,.92);
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(16px);
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      width: 34px; height: 34px; display: grid; place-items: center;
+      border-radius: 11px; color: white; font-weight: 800; font-size: 17px;
+      background: linear-gradient(145deg, #3b82f6, #1d4ed8);
+      box-shadow: 0 8px 18px rgba(37,99,235,.25);
+    }
+    .brand-name { font-size: 16px; font-weight: 750; letter-spacing: -.2px; }
+    .brand-version { color: var(--muted-2); font-size: 12px; margin-left: 3px; }
+    .top-actions { display: flex; align-items: center; gap: 22px; color: var(--muted); }
+    .top-link { border: 0; background: transparent; color: var(--muted); padding: 6px; }
+    .top-link:hover { color: var(--brand); }
+    .top-link.active { color: var(--brand); font-weight: 700; }
+    .health-button { cursor: pointer; }
+    .health-button:hover { border-color: #86efac; box-shadow: 0 4px 12px rgba(22, 163, 74, .12); }
+    .health-chip {
+      display: inline-flex; align-items: center; gap: 8px; padding: 8px 12px;
+      border: 1px solid #bbf7d0; border-radius: 999px; color: #15803d;
+      background: var(--success-soft); font-size: 12px; font-weight: 650;
+    }
+    .health-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+
+    .workspace { width: min(1280px, calc(100% - 72px)); margin: 0 auto; flex: 1; padding: 38px 0 54px; }
+    .view { display: none; animation: enter .22s ease-out; }
+    .view.active { display: block; }
+    @keyframes enter { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .page-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 28px; }
+    .eyebrow { color: var(--brand); font-size: 12px; font-weight: 750; letter-spacing: .08em; text-transform: uppercase; }
+    h1 { margin: 6px 0 7px; font-size: 32px; line-height: 1.2; letter-spacing: -.8px; }
+    h2 { margin: 0; font-size: 19px; letter-spacing: -.25px; }
+    h3 { margin: 0; font-size: 15px; }
+    .lead { margin: 0; color: var(--muted); font-size: 15px; }
+    .head-note { color: var(--muted); font-size: 13px; }
+
+    .hero-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(330px, .8fr); gap: 22px; align-items: stretch; }
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-xl); box-shadow: var(--shadow-soft); }
+    .card-pad { padding: 26px; }
+    .source-card { box-shadow: var(--shadow); }
+    .section-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: 17px; }
+    .section-title .hint { color: var(--muted-2); font-size: 12px; }
+
+    .device-list { display: grid; gap: 11px; }
+    .device {
+      width: 100%; display: flex; align-items: center; gap: 15px; padding: 15px 16px;
+      text-align: left; border: 1px solid var(--line); border-radius: var(--radius-lg);
+      background: #fff; color: var(--text); transition: .18s ease;
+    }
+    .device:hover { border-color: #b8c9ef; background: #fbfdff; transform: translateY(-1px); }
+    .device.selected { border: 2px solid var(--brand); padding: 14px 15px; background: var(--brand-soft); }
+    .device-icon { width: 42px; height: 42px; display: grid; place-items: center; flex: 0 0 42px; border-radius: 13px; color: var(--brand); background: #dbeafe; font-size: 19px; }
+    .device-copy { min-width: 0; flex: 1; }
+    .device-name { display: flex; align-items: center; gap: 8px; font-weight: 750; }
+    .device-meta { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .device-status { text-align: right; color: var(--success); font-size: 12px; font-weight: 650; }
+    .device-status.warn { color: var(--warning); }
+    .radio { width: 17px; height: 17px; border: 2px solid #cbd5e1; border-radius: 50%; position: relative; }
+    .device.selected .radio { border-color: var(--brand); }
+    .device.selected .radio::after { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: var(--brand); }
+
+    .image-entry { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); }
+    .image-entry-icon { width: 35px; height: 35px; display: grid; place-items: center; border-radius: 10px; color: #475569; background: #f1f5f9; }
+    .image-entry-copy { flex: 1; }
+    .image-entry-title { font-weight: 650; }
+    .image-entry-sub { margin-top: 1px; color: var(--muted); font-size: 12px; }
+    .text-button { border: 0; padding: 7px 0; color: var(--brand); background: transparent; font-weight: 650; }
+
+    .auto-card { position: relative; overflow: hidden; background: linear-gradient(155deg, #102a5c 0%, #1d4ed8 100%); border: 0; color: #fff; box-shadow: 0 18px 45px rgba(29,78,216,.22); }
+    .auto-card::after { content: ""; position: absolute; width: 220px; height: 220px; right: -100px; top: -110px; border-radius: 50%; border: 1px solid rgba(255,255,255,.2); box-shadow: 0 0 0 28px rgba(255,255,255,.04), 0 0 0 57px rgba(255,255,255,.035); }
+    .auto-card .card-pad { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; }
+    .auto-card .eyebrow { color: #bfdbfe; }
+    .auto-card .lead { color: #dbeafe; font-size: 13px; }
+    .plan-list { display: grid; gap: 14px; margin: 25px 0; }
+    .plan-step { display: flex; gap: 11px; align-items: flex-start; }
+    .step-num { width: 24px; height: 24px; display: grid; place-items: center; flex: 0 0 24px; border-radius: 50%; color: #1d4ed8; background: #dbeafe; font-size: 12px; font-weight: 800; }
+    .step-title { font-weight: 700; }
+    .step-desc { margin-top: 1px; color: #bfdbfe; font-size: 12px; }
+    .auto-note { margin-top: auto; padding-top: 17px; border-top: 1px solid rgba(255,255,255,.18); color: #dbeafe; font-size: 12px; }
+
+    .advanced { margin-top: 20px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); overflow: hidden; }
+    .advanced summary { display: flex; align-items: center; justify-content: space-between; padding: 16px 18px; cursor: pointer; color: #334155; font-weight: 700; list-style: none; }
+    .advanced summary::-webkit-details-marker { display: none; }
+    .advanced summary::after { content: "+"; color: var(--muted); font-size: 20px; font-weight: 400; }
+    .advanced[open] summary::after { content: "−"; }
+    .advanced-body { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; padding: 0 18px 18px; border-top: 1px solid var(--line); }
+    .setting { padding-top: 15px; }
+    .setting-label { color: var(--muted); font-size: 12px; }
+    .setting-value { margin-top: 4px; color: var(--text); font-weight: 650; }
+
+    .cta-row { display: flex; align-items: center; gap: 14px; margin-top: 22px; }
+    .primary {
+      min-width: 178px; padding: 13px 22px; border: 0; border-radius: 12px; color: #fff;
+      background: var(--brand); box-shadow: 0 9px 20px rgba(37,99,235,.24); font-weight: 750;
+    }
+    .primary:hover { background: var(--brand-dark); transform: translateY(-1px); }
+    .secondary { padding: 11px 16px; border: 1px solid var(--line-strong); border-radius: 11px; color: #475569; background: #fff; font-weight: 650; }
+    .secondary:hover { border-color: #aab9d0; background: #f8fafc; }
+    .helper { color: var(--muted); font-size: 12px; }
+
+    .status-strip { display: flex; align-items: center; gap: 24px; margin: 26px 0 18px; color: var(--muted); font-size: 12px; }
+    .status-item { display: inline-flex; align-items: center; gap: 7px; }
+    .status-item strong { color: var(--text); }
+    .mini-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); }
+
+    .scan-card { max-width: 940px; margin: 50px auto 0; padding: 42px 52px; text-align: center; }
+    .scan-orbit { width: 86px; height: 86px; display: grid; place-items: center; margin: 0 auto 23px; border: 7px solid #dbeafe; border-top-color: var(--brand); border-radius: 50%; color: var(--brand); font-weight: 800; animation: spin 1.15s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .scan-card .lead { margin-top: 8px; }
+    .progress { height: 10px; margin: 30px 0 12px; overflow: hidden; border-radius: 999px; background: #e8eef8; }
+    .progress-fill { height: 100%; width: 64%; border-radius: inherit; background: linear-gradient(90deg, #2563eb, #60a5fa); }
+    .scan-meta { display: flex; justify-content: space-between; color: var(--muted); font-size: 12px; }
+    .scan-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 30px; text-align: left; }
+    .scan-actions { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 24px; }
+    .metric { padding: 15px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-soft); }
+    .metric-value { display: block; color: var(--text); font-size: 21px; font-weight: 780; }
+    .metric-label { color: var(--muted); font-size: 12px; }
+
+    .result-head { display: flex; align-items: flex-end; justify-content: space-between; margin-bottom: 20px; }
+    .result-summary { display: flex; gap: 12px; }
+    .summary-pill { min-width: 112px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+    .summary-pill strong { display: block; font-size: 20px; }
+    .summary-pill span { color: var(--muted); font-size: 11px; }
+    .result-layout { display: grid; grid-template-columns: 225px minmax(0, 1fr) 285px; gap: 16px; }
+    .filter-panel, .preview-panel { padding: 20px; }
+    .filter-panel { min-height: 530px; }
+    .filter-group { margin-top: 22px; }
+    .filter-label { color: var(--muted); font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+    .filter-option { display: flex; align-items: center; justify-content: space-between; width: 100%; margin-top: 9px; padding: 6px 0; border: 0; color: #475569; background: transparent; text-align: left; }
+    .filter-option:hover { color: var(--brand); }
+    .filter-option.active { color: var(--brand); font-weight: 700; }
+    .filter-count { color: var(--muted-2); font-size: 11px; }
+    .results-panel { min-width: 0; overflow: hidden; }
+    .results-toolbar { display: flex; gap: 10px; margin-bottom: 12px; }
+    .search { flex: 1; padding: 11px 13px; border: 1px solid var(--line); border-radius: 11px; outline: none; color: var(--text); }
+    .search:focus { border-color: #93b4f3; box-shadow: 0 0 0 3px #eff6ff; }
+    .select { padding: 0 11px; border: 1px solid var(--line); border-radius: 11px; background: #fff; color: #475569; }
+    .file-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+    .file-table th { padding: 11px 14px; color: var(--muted); background: var(--surface-soft); font-size: 11px; text-align: left; font-weight: 700; }
+    .file-table td { padding: 14px; border-top: 1px solid var(--line); color: #334155; }
+    .file-table tr:hover td { background: #fbfdff; }
+    .file-table tr.selected td { background: var(--brand-soft); }
+    .file-name { display: flex; align-items: center; gap: 9px; font-weight: 650; }
+    .file-icon { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 8px; color: #2563eb; background: #eff6ff; font-size: 12px; }
+    .quality { display: inline-flex; align-items: center; gap: 5px; color: var(--success); font-size: 12px; font-weight: 650; }
+    .quality-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .preview-panel { min-height: 530px; background: var(--surface-soft); }
+    .preview-empty { height: 100%; min-height: 330px; display: grid; place-items: center; text-align: center; color: var(--muted); }
+    .preview-art { width: 76px; height: 76px; display: grid; place-items: center; margin: 0 auto 14px; border-radius: 22px; color: #93a4bd; background: #e8eef7; font-size: 28px; }
+    .preview-hint { max-width: 170px; font-size: 12px; }
+    .preview-filled { display: grid; justify-items: center; gap: 8px; color: var(--text); text-align: center; }
+    .preview-filled span, .preview-filled small { color: var(--muted); font-size: 12px; }
+    .preview-shell { min-height: 430px; display: flex; flex-direction: column; gap: 14px; }
+    .preview-type { display: inline-flex; align-items: center; gap: 6px; width: fit-content; padding: 5px 8px; border-radius: 8px; color: var(--brand); background: var(--brand-soft); font-size: 11px; font-weight: 750; }
+    .preview-file-name { overflow: hidden; color: var(--text); font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+    .preview-file-meta { color: var(--muted); font-size: 11px; }
+    .preview-image-frame { min-height: 220px; display: grid; place-items: center; padding: 15px; border: 1px solid var(--line); border-radius: 14px; background: #eef3f9; }
+    .preview-image { display: block; width: 100%; max-height: 230px; border-radius: 10px; object-fit: contain; box-shadow: 0 8px 22px rgba(42, 62, 91, .14); }
+    .preview-video-frame { position: relative; min-height: 220px; display: grid; place-items: center; overflow: hidden; padding: 15px; border: 1px solid var(--line); border-radius: 14px; background: #0f172a; }
+    .preview-video-frame .preview-image { width: 100%; max-height: 230px; opacity: .92; }
+    .video-play { position: absolute; display: grid; place-items: center; width: 52px; height: 52px; padding-left: 3px; border: 0; border-radius: 50%; color: #fff; background: rgba(15, 23, 42, .78); font-size: 20px; box-shadow: 0 8px 22px rgba(15, 23, 42, .28); }
+    .video-frame-label { position: absolute; left: 24px; bottom: 23px; padding: 5px 8px; border-radius: 7px; color: #fff; background: rgba(15, 23, 42, .72); font-size: 11px; font-weight: 700; }
+    .preview-text { min-height: 190px; max-height: 250px; overflow: auto; padding: 14px; border: 1px solid var(--line); border-radius: 12px; color: #334155; background: #fff; font: 12px/1.7 Consolas, "Microsoft YaHei", monospace; white-space: pre-wrap; word-break: break-word; }
+    .preview-note { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); color: var(--muted); font-size: 11px; line-height: 1.6; }
+    .preview-unavailable { min-height: 190px; padding: 15px; border: 1px dashed #cbd5e1; border-radius: 12px; color: #475569; background: #fff; font: 11px/1.7 Consolas, monospace; white-space: pre-wrap; word-break: break-all; }
+
+    .tools-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 22px; }
+    .tool-card { padding: 22px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: #fff; transition: .18s ease; }
+    .tool-card:hover { border-color: #b8c9ef; box-shadow: var(--shadow-soft); transform: translateY(-2px); }
+    .tool-icon { width: 42px; height: 42px; display: grid; place-items: center; margin-bottom: 17px; border-radius: 13px; color: var(--brand); background: var(--brand-soft); font-size: 20px; }
+    .tool-card p { margin: 7px 0 18px; color: var(--muted); font-size: 12px; }
+    .tool-card .text-button { font-size: 13px; }
+    .smart-grid { display: grid; grid-template-columns: 1.2fr .8fr; gap: 16px; margin-top: 22px; }
+    .smart-overview, .smart-action, .smart-table { padding: 24px; }
+    .smart-status { display: flex; align-items: center; gap: 16px; }
+    .smart-status-mark { width: 62px; height: 62px; display: grid; place-items: center; border: 8px solid #bbf7d0; border-radius: 50%; color: var(--success); background: var(--success-soft); font-size: 23px; font-weight: 800; }
+    .smart-status-copy strong { display: block; font-size: 21px; }
+    .smart-status-copy span { color: var(--muted); font-size: 12px; }
+    .smart-facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 25px; }
+    .smart-fact { padding: 13px; border-radius: 11px; background: var(--surface-soft); }
+    .smart-fact strong { display: block; font-size: 17px; }
+    .smart-fact span { color: var(--muted); font-size: 11px; }
+    .smart-action { display: flex; flex-direction: column; justify-content: space-between; }
+    .smart-action p { margin: 8px 0 18px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .smart-table { margin-top: 16px; }
+    .smart-table table { width: 100%; border-collapse: collapse; }
+    .smart-table th, .smart-table td { padding: 13px 10px; border-bottom: 1px solid var(--line); text-align: left; font-size: 12px; }
+    .smart-table th { color: var(--muted); font-size: 11px; }
+    .smart-value-good { color: var(--success); font-weight: 700; }
+    .settings-layout { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 16px; }
+    .settings-nav { display: grid; align-content: start; gap: 5px; padding: 12px; }
+    .settings-nav button { padding: 11px 12px; border: 0; border-radius: 9px; color: #475569; background: transparent; text-align: left; }
+    .settings-nav button.active, .settings-nav button:hover { color: var(--brand); background: var(--brand-soft); font-weight: 700; }
+    .settings-content { padding: 24px; }
+    .settings-group + .settings-group { margin-top: 28px; padding-top: 24px; border-top: 1px solid var(--line); }
+    .settings-group h3 { margin-bottom: 4px; }
+    .settings-group > p { margin: 0 0 15px; color: var(--muted); font-size: 12px; }
+    .setting-row { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 15px 0; border-bottom: 1px solid var(--line); }
+    .setting-row:last-child { border-bottom: 0; }
+    .setting-row strong { display: block; font-size: 13px; }
+    .setting-row span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; }
+    .toggle { position: relative; width: 42px; height: 24px; flex: 0 0 42px; border: 0; border-radius: 999px; background: #cbd5e1; }
+    .toggle::after { content: ""; position: absolute; top: 4px; left: 4px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: .18s ease; }
+    .toggle.on { background: var(--brand); }
+    .toggle.on::after { left: 22px; }
+    .extension-section { margin-top: 34px; }
+    .extension-section > p { margin: 6px 0 14px; color: var(--muted); font-size: 12px; }
+    .extension-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .extension-card { padding: 16px; border: 1px dashed var(--line-strong); border-radius: 13px; background: var(--surface-soft); }
+    .extension-card strong { font-size: 13px; }
+    .extension-card p { margin: 6px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+    .tool-subpage-grid { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; }
+    .tool-main-card, .tool-side-card { padding: 24px; }
+    .tool-main-card h2, .tool-side-card h3 { margin-bottom: 7px; }
+    .tool-main-card > .lead, .tool-side-card > p { margin-top: 0; }
+    .tool-stepper { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin: 22px 0; }
+    .tool-step { display: flex; align-items: center; gap: 8px; padding: 11px; border: 1px solid var(--line); border-radius: 10px; color: var(--muted); background: var(--surface-soft); font-size: 11px; }
+    .tool-step.active { border-color: #bfdbfe; color: var(--brand); background: var(--brand-soft); font-weight: 700; }
+    .tool-step-number { width: 22px; height: 22px; display: grid; place-items: center; flex: 0 0 22px; border-radius: 50%; color: #fff; background: #94a3b8; font-size: 11px; font-weight: 800; }
+    .tool-step.active .tool-step-number { background: var(--brand); }
+    .tool-form { display: grid; gap: 13px; }
+    .tool-form-row { display: grid; grid-template-columns: 145px minmax(0, 1fr); align-items: center; gap: 14px; min-height: 44px; }
+    .tool-form-label { color: #475569; font-size: 12px; font-weight: 700; }
+    .tool-input, .tool-select { width: 100%; padding: 11px 12px; border: 1px solid var(--line); border-radius: 10px; outline: none; color: var(--text); background: #fff; }
+    .tool-input:focus, .tool-select:focus { border-color: #93b4f3; box-shadow: 0 0 0 3px #eff6ff; }
+    .tool-dropzone { display: grid; place-items: center; min-height: 150px; padding: 24px; border: 1px dashed #93b4f3; border-radius: 14px; color: var(--brand); background: var(--brand-soft); text-align: center; }
+    .tool-dropzone strong { display: block; margin-bottom: 7px; }
+    .tool-dropzone span { color: var(--muted); font-size: 11px; }
+    .tool-checks { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .tool-check { display: flex; align-items: center; gap: 8px; padding: 11px; border: 1px solid var(--line); border-radius: 10px; color: #475569; background: #fff; font-size: 12px; }
+    .tool-check input { accent-color: var(--brand); }
+    .tool-actions { display: flex; align-items: center; gap: 12px; margin-top: 23px; padding-top: 18px; border-top: 1px solid var(--line); }
+    .tool-side-list { display: grid; gap: 11px; margin-top: 17px; }
+    .tool-side-item { display: flex; align-items: flex-start; gap: 9px; color: #475569; font-size: 12px; line-height: 1.6; }
+    .tool-side-item::before { content: "✓"; color: var(--success); font-weight: 800; }
+    .tool-status { margin-top: 16px; padding: 13px; border-radius: 11px; color: #166534; background: var(--success-soft); font-size: 11px; line-height: 1.6; }
+    .tool-data-table { width: 100%; margin-top: 18px; border-collapse: collapse; }
+    .tool-data-table th, .tool-data-table td { padding: 12px 10px; border-bottom: 1px solid var(--line); text-align: left; font-size: 12px; }
+    .tool-data-table th { color: var(--muted); font-size: 11px; }
+    .tool-pill { display: inline-flex; padding: 4px 7px; border-radius: 7px; color: var(--success); background: var(--success-soft); font-size: 11px; font-weight: 700; }
+    .guide-list { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-top: 18px; }
+    .guide-item { padding: 17px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-soft); }
+    .guide-item strong { display: block; margin-bottom: 6px; }
+    .guide-item p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.7; }
+
+    .footer { display: flex; justify-content: space-between; align-items: center; width: min(1280px, calc(100% - 72px)); margin: auto; padding: 0 0 24px; color: var(--muted-2); font-size: 12px; }
+    .footer-links { display: flex; gap: 17px; }
+    .footer button { border: 0; color: var(--muted); background: transparent; }
+    .footer button:hover { color: var(--brand); }
+
+    @media (max-width: 1180px) {
+      body { min-width: 960px; }
+      .hero-grid { grid-template-columns: 1fr; }
+      .auto-card { min-height: 300px; }
+      .result-layout { grid-template-columns: 190px minmax(0,1fr); }
+      .preview-panel { display: none; }
+      .smart-grid, .settings-layout { grid-template-columns: 1fr; }
+      .extension-grid { grid-template-columns: 1fr 1fr; }
+      .tool-subpage-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark">P</div>
+        <div class="brand-name">PhoenixRecover <span class="brand-version">UI Redesign v2</span></div>
+      </div>
+      <div class="top-actions">
+        <button class="health-chip health-button" data-view="smart"><span class="health-dot"></span>设备健康：良好</button>
+        <button class="top-link" data-view="tools">工具</button>
+        <button class="top-link" data-view="settings">设置</button>
+        <button class="top-link" data-toast="PhoenixRecover v2.0">帮助</button>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section id="home" class="view active">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">DATA RECOVERY</div>
+            <h1>恢复你的数据</h1>
+            <p class="lead">选择数据所在的设备，我们会自动选择最合适的恢复方式。</p>
+          </div>
+          <div class="head-note">上次扫描：今天 10:24 · 可继续</div>
+        </div>
+
+        <div class="hero-grid">
+          <section class="card source-card">
+            <div class="card-pad">
+              <div class="section-title">
+                <h2>选择恢复来源</h2>
+                <span class="hint">一步完成选择</span>
+              </div>
+              <div class="device-list">
+                <button class="device selected" data-source="系统盘 C:">
+                  <span class="device-icon">▣</span>
+                  <span class="device-copy"><span class="device-name">系统盘 C: <span class="health-chip"><span class="health-dot"></span>可读取</span></span><span class="device-meta">NTFS · 476 GB · 已用 312 GB</span></span>
+                  <span class="device-status">推荐</span><span class="radio"></span>
+                </button>
+                <button class="device" data-source="数据盘 D:">
+                  <span class="device-icon">▤</span>
+                  <span class="device-copy"><span class="device-name">数据盘 D:</span><span class="device-meta">NTFS · 1.8 TB · 已用 1.1 TB</span></span>
+                  <span class="device-status">健康</span><span class="radio"></span>
+                </button>
+                <button class="device" data-source="移动存储 E:">
+                  <span class="device-icon">▥</span>
+                  <span class="device-copy"><span class="device-name">移动存储 E:</span><span class="device-meta">exFAT · 128 GB · SD 卡</span></span>
+                  <span class="device-status warn">注意</span><span class="radio"></span>
+                </button>
+              </div>
+              <div class="image-entry">
+                <div class="image-entry-icon">▧</div>
+                <div class="image-entry-copy"><div class="image-entry-title">扫描磁盘镜像</div><div class="image-entry-sub">支持 .img、.dd 等只读镜像文件</div></div>
+                <button class="text-button" data-toast="打开镜像文件">选择文件 →</button>
+              </div>
+              <div class="cta-row">
+                <button class="primary" id="startRecovery">开始恢复</button>
+                <span class="helper" id="selectedSource">已选择：系统盘 C:</span>
+              </div>
+            </div>
+          </section>
+
+          <aside class="card auto-card">
+            <div class="card-pad">
+              <div class="eyebrow">SMART RECOVERY</div>
+              <h2 style="margin-top:7px">自动恢复模式</h2>
+              <p class="lead" style="margin-top:8px">无需理解扫描模式，PhoenixRecover 会自动完成判断。</p>
+              <div class="plan-list">
+                <div class="plan-step"><span class="step-num">1</span><div><div class="step-title">快速读取文件系统</div><div class="step-desc">优先保留文件名、目录和时间信息</div></div></div>
+                <div class="plan-step"><span class="step-num">2</span><div><div class="step-title">深度扫描删除记录</div><div class="step-desc">查找已删除、格式化后的文件</div></div></div>
+                <div class="plan-step"><span class="step-num">3</span><div><div class="step-title">按文件结构补充恢复</div><div class="step-desc">必要时启用 RAW 和碎片分析</div></div></div>
+              </div>
+              <div class="auto-note">高级选项不会影响普通用户流程，可在扫描前展开调整。</div>
+            </div>
+          </aside>
+        </div>
+
+        <details class="advanced">
+          <summary><span>高级设置</span><span style="color:var(--muted);font-size:12px;font-weight:500">扫描模式、文件类型、镜像策略</span></summary>
+          <div class="advanced-body">
+            <div class="setting"><div class="setting-label">扫描策略</div><div class="setting-value">自动选择</div></div>
+            <div class="setting"><div class="setting-label">文件类型</div><div class="setting-value">全部类型</div></div>
+            <div class="setting"><div class="setting-label">磁盘读取</div><div class="setting-value">只读 · 自动重试</div></div>
+          </div>
+        </details>
+
+        <div class="status-strip">
+          <span class="status-item"><span class="mini-dot"></span><strong>不会写入源盘</strong></span>
+          <span class="status-item">预计步骤：1 次选择 + 1 次点击</span>
+          <span class="status-item">恢复文件将保存到其他位置</span>
+        </div>
+      </section>
+
+      <section id="scanning" class="view">
+        <div class="page-head"><div><div class="eyebrow">RECOVERY IN PROGRESS</div><h1>正在扫描系统盘 C:</h1><p class="lead">自动模式正在按顺序检查文件系统、删除记录和文件结构。</p></div><button class="secondary" id="cancelScan">停止扫描</button></div>
+        <div class="card scan-card">
+          <div class="scan-orbit">64%</div><h2>正在进行深度扫描</h2><p class="lead">正在分析 NTFS 删除记录 · 可以随时停止，结果会自动保留</p>
+          <div class="progress"><div class="progress-fill" id="scanProgress"></div></div><div class="scan-meta"><span id="scanProgressText">已扫描 312.4 GB / 476 GB</span><strong id="scanEta" style="color:var(--brand)">预计还需 12 分钟</strong></div>
+          <div class="scan-metrics"><div class="metric"><span class="metric-value" id="foundFiles">18,426</span><span class="metric-label">已发现文件</span></div><div class="metric"><span class="metric-value" id="scannedSpace">312.4 GB</span><span class="metric-label">已扫描空间</span></div><div class="metric"><span class="metric-value">186 MB/s</span><span class="metric-label">当前速度</span></div></div><div class="scan-actions"><button class="secondary" id="previewResults">查看已发现文件</button><span class="helper">扫描仍会在后台继续</span></div>
+        </div>
+      </section>
+
+      <section id="results" class="view">
+        <div class="result-head"><div><div class="eyebrow">RECOVERY RESULTS</div><h1>找到可以恢复的文件</h1><p class="lead">先预览，再选择需要恢复的文件。</p></div><div class="result-summary"><div class="summary-pill"><strong>18,426</strong><span>文件</span></div><div class="summary-pill"><strong>312 GB</strong><span>可恢复数据</span></div></div></div>
+        <div class="result-layout">
+           <aside class="card filter-panel"><h3>筛选结果</h3><div class="filter-group"><div class="filter-label">文件位置</div><button class="filter-option active" data-filter="all">全部位置 <span class="filter-count">18,426</span></button><button class="filter-option" data-filter="original">原目录结构 <span class="filter-count">11,284</span></button><button class="filter-option" data-filter="reconstructed">重建文件 <span class="filter-count">7,142</span></button></div><div class="filter-group"><div class="filter-label">文件类型</div><button class="filter-option" data-filter="image">图片 <span class="filter-count">8,240</span></button><button class="filter-option" data-filter="document">文档 <span class="filter-count">4,116</span></button><button class="filter-option" data-filter="video">视频 <span class="filter-count">2,438</span></button><button class="filter-option" data-filter="other">其他 <span class="filter-count">3,632</span></button></div><div class="filter-group"><div class="filter-label">恢复质量</div><button class="filter-option" data-filter="high">高质量 <span class="filter-count">14,092</span></button><button class="filter-option" data-filter="partial">部分恢复 <span class="filter-count">4,334</span></button></div></aside>
+          <section class="results-panel"><div class="results-toolbar"><input class="search" placeholder="搜索文件名或路径" /><select class="select"><option>按质量排序</option><option>按文件名排序</option><option>按大小排序</option></select><button class="primary" style="min-width:132px;padding:10px 15px" data-toast="已选择文件，下一步选择恢复位置">恢复所选</button></div><table class="file-table"><thead><tr><th style="width:48%">文件</th><th>位置</th><th>大小</th><th>质量</th></tr></thead><tbody><tr><td><div class="file-name"><span class="file-icon">▧</span>旅行照片_2025.jpg</div></td><td>照片\旅行</td><td>4.8 MB</td><td><span class="quality"><span class="quality-dot"></span>高</span></td></tr><tr><td><div class="file-name"><span class="file-icon">▤</span>项目预算.xlsx</div></td><td>文档\项目</td><td>86 KB</td><td><span class="quality"><span class="quality-dot"></span>高</span></td></tr><tr><td><div class="file-name"><span class="file-icon">▣</span>会议记录.docx</div></td><td>文档\会议</td><td>1.2 MB</td><td><span class="quality" style="color:var(--warning)"><span class="quality-dot"></span>部分</span></td></tr><tr><td><div class="file-name"><span class="file-icon">▶</span>家庭视频_01.mp4</div></td><td>视频\2024</td><td>1.8 GB</td><td><span class="quality"><span class="quality-dot"></span>高</span></td></tr><tr><td><div class="file-name"><span class="file-icon">▧</span>设计稿_final.png</div></td><td>图片\设计</td><td>8.6 MB</td><td><span class="quality"><span class="quality-dot"></span>高</span></td></tr></tbody></table></section>
+          <aside class="card preview-panel"><h3>文件预览</h3><div class="preview-empty" id="previewContent"><div><div class="preview-art">⌕</div><div class="preview-hint">选择文件后，这里会自动判断预览方式。图片显示缩略图，无法解析的文件显示前 100 字节摘要。</div></div></div></aside>
+        </div>
+      </section>
+
+      <section id="smart" class="view">
+        <div class="page-head"><div><div class="eyebrow">DEVICE HEALTH</div><h1>SMART 健康状态</h1><p class="lead">先确认源盘状态，再决定是否优先制作只读镜像。</p></div><button class="secondary" data-view="home">返回恢复首页</button></div>
+        <div class="smart-grid">
+          <section class="card smart-overview"><div class="smart-status"><div class="smart-status-mark">✓</div><div class="smart-status-copy"><strong>设备健康良好</strong><span>最近检测：今天 10:24 · 系统盘 C:</span></div></div><div class="smart-facts"><div class="smart-fact"><strong>0</strong><span>重映射扇区</span></div><div class="smart-fact"><strong>0</strong><span>待定扇区</span></div><div class="smart-fact"><strong>0</strong><span>不可校正扇区</span></div></div></section>
+          <section class="card smart-action"><div><div class="eyebrow">SAFE RECOMMENDATION</div><h3 style="margin-top:8px">建议直接开始恢复</h3><p>当前没有发现明显介质风险。如果健康状态变为“注意”或“危险”，系统会自动建议先制作磁盘镜像。</p></div><button class="primary" data-view="home">选择恢复来源</button></section>
+        </div>
+        <section class="card smart-table"><div class="section-title"><h2>关键属性</h2><span class="hint">只读检测</span></div><table><thead><tr><th>属性</th><th>当前值</th><th>阈值</th><th>状态</th></tr></thead><tbody><tr><td>通电时间</td><td>1,248 小时</td><td>—</td><td class="smart-value-good">正常</td></tr><tr><td>重映射扇区计数</td><td>0</td><td>10</td><td class="smart-value-good">正常</td></tr><tr><td>当前待定扇区</td><td>0</td><td>1</td><td class="smart-value-good">正常</td></tr><tr><td>温度</td><td>36 °C</td><td>55 °C</td><td class="smart-value-good">正常</td></tr></tbody></table></section>
+      </section>
+
+      <section id="settings" class="view">
+        <div class="page-head"><div><div class="eyebrow">APPLICATION SETTINGS</div><h1>设置</h1><p class="lead">把影响恢复安全的选项集中管理，普通用户保持默认即可。</p></div><button class="secondary" data-view="home">返回恢复首页</button></div>
+        <div class="settings-layout">
+          <nav class="card settings-nav"><button class="active" data-setting-section="general">常规</button><button data-setting-section="scan">扫描与读取</button><button data-setting-section="preview">预览与结果</button><button data-setting-section="advanced">高级与日志</button></nav>
+          <section class="card settings-content"><div class="settings-group"><h3>安全默认值</h3><p>这些选项用于保护源盘，建议保持开启。</p><div class="setting-row"><div><strong>始终只读访问源盘</strong><span>禁止恢复流程向源设备写入数据。</span></div><button class="toggle on" data-setting="readonly" aria-label="始终只读访问源盘"></button></div><div class="setting-row"><div><strong>检测到风险时自动建议制作镜像</strong><span>SMART 异常或坏区增加时，优先保护原始介质。</span></div><button class="toggle on" data-setting="image-first" aria-label="自动建议制作镜像"></button></div></div><div class="settings-group"><h3>恢复目标</h3><p>恢复文件默认保存到与源盘不同的位置。</p><div class="setting-row"><div><strong>恢复前确认目标位置</strong><span>防止误把文件恢复回源盘。</span></div><button class="toggle on" data-setting="confirm-target" aria-label="恢复前确认目标位置"></button></div><div class="setting-row"><div><strong>保留原目录结构</strong><span>优先还原原始文件夹和文件名。</span></div><button class="toggle on" data-setting="keep-tree" aria-label="保留原目录结构"></button></div></div></section>
+        </div>
+      </section>
+
+      <section id="tools" class="view"><div class="page-head"><div><div class="eyebrow">TOOLS</div><h1>更多工具</h1><p class="lead">常用操作集中在这里，普通恢复不需要进入此页面。</p></div><button class="secondary" data-view="home">返回恢复首页</button></div><div class="tools-grid"><article class="tool-card"><div class="tool-icon">◉</div><h3>SMART 健康检测</h3><p>查看重映射、待定和不可校正扇区，判断是否应该先制作镜像。</p><button class="text-button" data-toast="正在读取磁盘健康状态">检测磁盘健康 →</button></article><article class="tool-card"><div class="tool-icon">▧</div><h3>磁盘镜像</h3><p>制作只读镜像，支持断点续传、坏区日志和 SHA-256 校验。</p><button class="text-button" data-toast="打开镜像创建流程">创建磁盘镜像 →</button></article><article class="tool-card"><div class="tool-icon">✦</div><h3>文件修复</h3><p>修复部分损坏的图片、视频、压缩包、Office 和 SQLite 文件。</p><button class="text-button" data-toast="打开文件修复工具">选择文件修复 →</button></article><article class="tool-card"><div class="tool-icon">⌁</div><h3>分区探测</h3><p>检查丢失或损坏的 MBR、GPT、VBR 和常见文件系统分区。</p><button class="text-button" data-toast="分区探测将在高级恢复流程中自动执行">查看分区探测 →</button></article><article class="tool-card"><div class="tool-icon">⇩</div><h3>扫描会话</h3><p>打开上次保存的扫描结果，继续筛选和恢复文件。</p><button class="text-button" data-toast="打开扫描会话">打开历史会话 →</button></article><article class="tool-card"><div class="tool-icon">?</div><h3>恢复指南</h3><p>了解源盘保护、镜像、恢复目标和不同扫描模式的使用建议。</p><button class="text-button" data-toast="打开恢复指南">查看使用说明 →</button></article></div></section>
+    </main>
+
+    <footer class="footer"><span>PhoenixRecover · 只读扫描，安全恢复</span><div class="footer-links"><button data-toast="版本 2.0.0">版本信息</button><button data-toast="检查更新">检查更新</button><button data-toast="隐私说明">隐私</button></div></footer>
+  </div>
+
+  <script>
+    const views = [...document.querySelectorAll('.view')];
+    let scanTimer = null;
+    const toast = (text) => {
+      let el = document.querySelector('.toast');
+      if (!el) { el = document.createElement('div'); el.className = 'toast'; document.body.appendChild(el); }
+      el.textContent = text; el.classList.add('show'); clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => el.classList.remove('show'), 2400);
+    };
+    const showView = (name) => {
+      views.forEach(v => v.classList.toggle('active', v.id === name));
+      document.querySelectorAll('.top-link').forEach(link => link.classList.toggle('active', link.dataset.view === name));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+    document.addEventListener('click', event => {
+      const viewButton = event.target.closest('[data-view]');
+      if (viewButton) showView(viewButton.dataset.view);
+    });
+    document.querySelectorAll('[data-toast]').forEach(btn => btn.addEventListener('click', () => toast(btn.dataset.toast)));
+    const extensionRegistry = [
+      { icon: '⌘', title: '文件签名分析', description: '识别文件头、扩展名与真实格式是否一致。' },
+      { icon: '◌', title: '重复文件清理', description: '按哈希和内容相似度整理重复恢复结果。' },
+      { icon: '＋', title: '自定义模块', description: '在功能注册表中添加一项，即可生成新的工具卡片。' }
+    ];
+    const extensionSection = document.createElement('section');
+    extensionSection.className = 'extension-section';
+    extensionSection.innerHTML = '<div class="eyebrow">EXTENSION POINT</div><h2 style="margin-top:7px">可扩展功能</h2><p>新功能不需要挤进恢复首页，注册模块后会自动出现在工具区。</p><div class="extension-grid">' + extensionRegistry.map(item => '<article class="extension-card"><strong>' + item.icon + '　' + item.title + '</strong><p>' + item.description + '</p></article>').join('') + '</div>';
+    document.querySelector('#tools').appendChild(extensionSection);
+    const toolSubpage = document.createElement('section');
+    toolSubpage.id = 'toolSubpage';
+    toolSubpage.className = 'view';
+    document.querySelector('main.workspace').appendChild(toolSubpage);
+    views.push(toolSubpage);
+    const toolPageDefinitions = {
+      imaging: {
+        eyebrow: 'DISK IMAGING', title: '磁盘镜像', description: '先制作只读副本，再在镜像上恢复，适合有坏区或状态不稳定的设备。',
+        body: '<div class="tool-stepper"><div class="tool-step active"><span class="tool-step-number">1</span>选择源盘</div><div class="tool-step"><span class="tool-step-number">2</span>设置镜像</div><div class="tool-step"><span class="tool-step-number">3</span>开始制作</div></div><div class="tool-form"><div class="tool-form-row"><div class="tool-form-label">源设备</div><select class="tool-select"><option>系统盘 C: · NTFS · 476 GB</option><option>数据盘 D: · NTFS · 1.8 TB</option></select></div><div class="tool-form-row"><div class="tool-form-label">镜像保存位置</div><input class="tool-input" value="D:\\PhoenixImages\\system-c.img" /></div><div class="tool-checks"><label class="tool-check"><input type="checkbox" checked />遇到坏区自动重试</label><label class="tool-check"><input type="checkbox" checked />生成 SHA-256 校验</label><label class="tool-check"><input type="checkbox" checked />记录坏区日志</label><label class="tool-check"><input type="checkbox" />完成后自动扫描</label></div></div><div class="tool-actions"><button class="primary" data-tool-action="开始制作只读镜像">开始制作镜像</button><span class="helper">源设备只读 · 可随时取消</span></div>',
+        side: '<h3>为什么先做镜像？</h3><p>镜像可以把后续扫描从原始设备转移到副本上，降低反复读取对故障磁盘的压力。</p><div class="tool-side-list"><div class="tool-side-item">不会向源设备写入任何数据</div><div class="tool-side-item">支持断点续传和坏区日志</div><div class="tool-side-item">完成后可校验镜像完整性</div></div><div class="tool-status">当前 SMART 状态良好，可以直接恢复；如果扫描中出现读盘错误，建议返回这里制作镜像。</div>'
+      },
+      repair: {
+        eyebrow: 'FILE REPAIR', title: '文件修复', description: '针对已经找到但无法正常打开的文件，尝试修复结构并生成新的副本。',
+        body: '<div class="tool-stepper"><div class="tool-step active"><span class="tool-step-number">1</span>选择文件</div><div class="tool-step"><span class="tool-step-number">2</span>分析结构</div><div class="tool-step"><span class="tool-step-number">3</span>导出副本</div></div><div class="tool-dropzone"><div><strong>拖放文件到这里，或点击选择</strong><span>支持 JPG、PNG、MP4、ZIP、Office、SQLite 等格式</span></div></div><div class="tool-form" style="margin-top:16px"><div class="tool-form-row"><div class="tool-form-label">修复输出位置</div><input class="tool-input" value="D:\\PhoenixRecovered\\repaired\\" /></div><div class="tool-checks"><label class="tool-check"><input type="checkbox" checked />保留原始文件</label><label class="tool-check"><input type="checkbox" checked />修复后自动预览</label></div></div><div class="tool-actions"><button class="primary" data-tool-action="开始分析文件结构">开始分析</button><span class="helper">修复结果会生成新文件</span></div>',
+        side: '<h3>修复原则</h3><p>文件修复不会覆盖原始恢复结果，所有修复内容都写入新的目标文件。</p><div class="tool-side-list"><div class="tool-side-item">先分析文件头和结构</div><div class="tool-side-item">保留原始文件供对比</div><div class="tool-side-item">修复成功后可以直接预览</div></div>'
+      },
+      partition: {
+        eyebrow: 'PARTITION PROBE', title: '分区探测', description: '查找丢失、损坏或未挂载的 MBR、GPT、VBR 和文件系统分区。',
+        body: '<div class="tool-stepper"><div class="tool-step active"><span class="tool-step-number">1</span>选择设备</div><div class="tool-step"><span class="tool-step-number">2</span>探测结构</div><div class="tool-step"><span class="tool-step-number">3</span>选择分区</div></div><div class="tool-form"><div class="tool-form-row"><div class="tool-form-label">探测设备</div><select class="tool-select"><option>系统盘 C: · 476 GB</option><option>数据盘 D: · 1.8 TB</option><option>磁盘镜像文件</option></select></div><div class="tool-form-row"><div class="tool-form-label">探测范围</div><select class="tool-select"><option>自动检测 MBR / GPT / VBR</option><option>全盘深度探测</option><option>仅检测未分配空间</option></select></div></div><table class="tool-data-table"><thead><tr><th>候选分区</th><th>文件系统</th><th>起始位置</th><th>置信度</th></tr></thead><tbody><tr><td>分区 1</td><td>NTFS</td><td>2048 LBA</td><td><span class="tool-pill">98%</span></td></tr><tr><td>分区 2</td><td>exFAT</td><td>976,773,168 LBA</td><td><span class="tool-pill">91%</span></td></tr></tbody></table><div class="tool-actions"><button class="primary" data-tool-action="开始探测分区">开始探测</button><span class="helper">选择候选分区后可进入恢复流程</span></div>',
+        side: '<h3>探测结果如何使用？</h3><p>系统会按置信度排序候选分区。选中后先进行只读验证，再进入文件扫描。</p><div class="tool-side-list"><div class="tool-side-item">所有边界计算经过安全校验</div><div class="tool-side-item">不会自动写回分区表</div><div class="tool-side-item">支持从镜像文件探测</div></div>'
+      },
+      sessions: {
+        eyebrow: 'SCAN SESSIONS', title: '扫描会话', description: '打开之前保存的扫描进度，继续筛选和恢复文件。',
+        body: '<table class="tool-data-table"><thead><tr><th>会话</th><th>来源</th><th>时间</th><th>状态</th><th></th></tr></thead><tbody><tr><td>系统盘恢复 · 001</td><td>C: · NTFS</td><td>今天 10:24</td><td><span class="tool-pill">可继续</span></td><td><button class="text-button" data-tool-action="打开系统盘扫描会话">打开</button></td></tr><tr><td>移动存储恢复 · 002</td><td>E: · exFAT</td><td>昨天 16:08</td><td><span class="tool-pill">已完成</span></td><td><button class="text-button" data-tool-action="查看移动存储扫描会话">查看</button></td></tr></tbody></table><div class="tool-actions"><button class="secondary" data-tool-action="清理过期扫描会话">清理过期会话</button><span class="helper">会话只保存扫描索引，不保存源文件副本</span></div>',
+        side: '<h3>会话安全</h3><p>扫描会话可以帮助你中断后继续筛选，源盘和恢复目标不会因此发生变化。</p><div class="tool-side-list"><div class="tool-side-item">索引文件单独保存</div><div class="tool-side-item">可以手动删除会话</div><div class="tool-side-item">不会替代磁盘镜像</div></div>'
+      },
+      guide: {
+        eyebrow: 'RECOVERY GUIDE', title: '恢复指南', description: '按风险从低到高了解 PhoenixRecover 的推荐使用顺序。',
+        body: '<div class="guide-list"><article class="guide-item"><strong>01 · 保护源盘</strong><p>停止向源设备写入新数据，必要时先查看 SMART 并制作镜像。</p></article><article class="guide-item"><strong>02 · 选择恢复来源</strong><p>优先选择实际设备或只读镜像，不要把恢复目标设置在源盘上。</p></article><article class="guide-item"><strong>03 · 自动扫描</strong><p>先读取文件系统，再扫描删除记录，最后按文件结构补充恢复。</p></article><article class="guide-item"><strong>04 · 预览和恢复</strong><p>通过图片、视频第一帧、文本内容或前 100 字节摘要确认文件质量。</p></article></div><div class="tool-actions"><button class="primary" data-view="home">开始一次安全恢复</button></div>',
+        side: '<h3>遇到问题怎么办？</h3><p>如果源盘持续报错、容量识别异常或 SMART 显示危险，请停止重复扫描，先创建镜像。</p><div class="tool-status">恢复文件始终应该保存到另一个设备或另一个镜像目标。</div>'
+      }
+    };
+    const renderToolPage = (toolId) => {
+      const definition = toolPageDefinitions[toolId];
+      if (!definition) return;
+      toolSubpage.innerHTML = '<div class="page-head"><div><div class="eyebrow">' + definition.eyebrow + '</div><h1>' + definition.title + '</h1><p class="lead">' + definition.description + '</p></div><button class="secondary" data-view="tools">返回工具</button></div><div class="tool-subpage-grid"><section class="card tool-main-card">' + definition.body + '</section><aside class="card tool-side-card">' + definition.side + '</aside></div>';
+      toolSubpage.querySelectorAll('[data-tool-action]').forEach(button => button.addEventListener('click', () => toast(button.dataset.toolAction + '：演示操作已触发')));
+      showView('toolSubpage');
+    };
+    const toolRoutes = { '磁盘镜像': 'imaging', '文件修复': 'repair', '分区探测': 'partition', '扫描会话': 'sessions', '恢复指南': 'guide' };
+    document.querySelectorAll('#tools .tool-card').forEach(card => {
+      const title = card.querySelector('h3')?.textContent.trim();
+      const route = toolRoutes[title];
+      if (route) card.querySelector('.text-button').addEventListener('click', () => renderToolPage(route));
+    });
+    const smartToolButton = [...document.querySelectorAll('.tool-card')].find(card => card.querySelector('h3')?.textContent.includes('SMART'))?.querySelector('.text-button');
+    if (smartToolButton) smartToolButton.addEventListener('click', () => showView('smart'));
+    document.querySelectorAll('.settings-nav button').forEach(button => button.addEventListener('click', () => {
+      document.querySelectorAll('.settings-nav button').forEach(item => item.classList.remove('active'));
+      button.classList.add('active'); toast('已切换到“' + button.textContent + '”设置');
+    }));
+    document.querySelectorAll('.toggle').forEach(toggle => toggle.addEventListener('click', () => {
+      toggle.classList.toggle('on'); toast(toggle.getAttribute('aria-label') + (toggle.classList.contains('on') ? '：已开启' : '：已关闭'));
+    }));
+    document.querySelectorAll('.device').forEach(device => device.addEventListener('click', () => {
+      document.querySelectorAll('.device').forEach(d => d.classList.remove('selected'));
+      device.classList.add('selected');
+      document.querySelector('#selectedSource').textContent = '已选择：' + device.dataset.source;
+    }));
+    const escapeHtml = (value) => value.replace(/[&<>\"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[ch]));
+    const textPreviewSamples = {
+      txt: 'PhoenixRecover 扫描摘要\n\n这是可直接读取的文本内容示例。正式版本会显示文件开头的前 100 个字符，超出部分不会在预览区加载。',
+      log: '[2026-07-16 10:24:18] Recovery scan started\n[2026-07-16 10:24:21] File system metadata read successfully\n[2026-07-16 10:24:24] Deleted records discovered',
+      csv: 'name,type,size,quality\n旅行照片_2025.jpg,image,4.8 MB,high\n项目预算.xlsx,document,86 KB,high'
+    };
+    const makeHexPreview = (name) => {
+      const bytes = Array.from({ length: 100 }, (_, index) => (name.charCodeAt(index % name.length) + index * 17) % 256);
+      return Array.from({ length: 7 }, (_, line) => bytes.slice(line * 16, line === 6 ? 100 : line * 16 + 16).map(byte => byte.toString(16).padStart(2, '0').toUpperCase()).join(' ')).join('\n');
+    };
+    const renderPreview = (row) => {
+      const name = row.querySelector('.file-name').textContent.trim();
+      const size = row.children[2].textContent.trim();
+      const quality = row.querySelector('.quality').textContent.includes('部分') ? '部分恢复' : '高质量';
+      const extension = name.includes('.') ? name.split('.').pop().toLowerCase() : '';
+      const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'bmp'].includes(extension);
+      const isVideo = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v'].includes(extension);
+      const isText = ['txt', 'log', 'csv', 'json', 'md'].includes(extension);
+      let previewBody;
+      let previewType;
+      if (isImage) {
+        const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360"><defs><linearGradient id="g" x1="0" x2="1"><stop stop-color="#c7d2fe"/><stop offset="1" stop-color="#bfdbfe"/></linearGradient></defs><rect width="640" height="360" rx="18" fill="url(#g)"/><circle cx="500" cy="95" r="38" fill="#fde68a"/><path d="M0 290L180 130 300 230 390 165 640 360H0Z" fill="#60a5fa"/><path d="M0 315L125 220 235 285 355 205 640 360H0Z" fill="#2563eb" opacity=".72"/><text x="32" y="330" fill="white" font-family="Arial" font-size="20">PhoenixRecover · image preview</text></svg>';
+        previewType = '图片预览 · 原型缩略图';
+        previewBody = '<div class="preview-image-frame"><img class="preview-image" alt="' + escapeHtml(name) + ' 预览" src="data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(svg) + '"></div>';
+      } else if (isVideo) {
+        const videoSvg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360"><defs><linearGradient id="v" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#1e3a8a"/><stop offset="1" stop-color="#0f766e"/></linearGradient></defs><rect width="640" height="360" rx="18" fill="url(#v)"/><circle cx="490" cy="92" r="42" fill="#fde68a" opacity=".85"/><path d="M0 300L170 145 300 245 405 170 640 360H0Z" fill="#38bdf8" opacity=".86"/><path d="M0 320L125 240 250 290 360 220 640 360H0Z" fill="#0f766e" opacity=".88"/><text x="32" y="332" fill="white" font-family="Arial" font-size="20">PhoenixRecover · first frame</text></svg>';
+        previewType = '视频预览 · 第一帧画面';
+        previewBody = '<div class="preview-video-frame"><img class="preview-image" alt="' + escapeHtml(name) + ' 第一帧" src="data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(videoSvg) + '"><span class="video-play" aria-label="视频播放示意">▶</span><span class="video-frame-label">00:00 · 第一帧</span></div>';
+      } else if (isText) {
+        previewType = '文本预览 · 前 100 个字符';
+        previewBody = '<div class="preview-text">' + escapeHtml((textPreviewSamples[extension] || '暂无可读文本内容').slice(0, 100)) + '</div>';
+      } else {
+        previewType = '无法直接解析 · 前 100 字节摘要';
+        previewBody = '<div class="preview-unavailable"><strong>文件格式暂不支持直接预览</strong>\n以下为文件开头 100 字节的十六进制摘要：\n\n' + makeHexPreview(name) + '</div>';
+      }
+      document.querySelector('#previewContent').className = 'preview-shell';
+      document.querySelector('#previewContent').innerHTML = '<span class="preview-type">' + previewType + '</span><div class="preview-file-name" title="' + escapeHtml(name) + '">' + escapeHtml(name) + '</div><div class="preview-file-meta">' + size + ' · ' + quality + '</div>' + previewBody + '<div class="preview-note">预览仅用于判断文件内容和恢复质量。恢复操作会将文件写入其他位置，不会修改源盘。</div>';
+    };
+    document.querySelectorAll('.file-table tbody tr').forEach(row => row.addEventListener('click', () => {
+      document.querySelectorAll('.file-table tbody tr').forEach(item => item.classList.remove('selected'));
+      row.classList.add('selected'); renderPreview(row);
+    }));
+    const startScanDemo = () => {
+      clearInterval(scanTimer);
+      let progress = 64;
+      const fill = document.querySelector('.progress-fill');
+      scanTimer = setInterval(() => {
+        progress = Math.min(progress + 4, 100);
+        fill.style.width = progress + '%';
+        document.querySelector('.scan-orbit').textContent = progress + '%';
+        document.querySelector('#scanProgressText').textContent = '已扫描 ' + (476 * progress / 100).toFixed(1) + ' GB / 476 GB';
+        if (progress >= 100) {
+          clearInterval(scanTimer);
+          document.querySelector('#scanEta').textContent = '扫描完成';
+          toast('扫描完成，正在整理恢复结果');
+          setTimeout(() => showView('results'), 700);
+        }
+      }, 650);
+    };
+    document.querySelector('#startRecovery').addEventListener('click', () => {
+      showView('scanning'); toast('已开始自动恢复流程'); startScanDemo();
+    });
+    document.querySelector('#cancelScan').addEventListener('click', () => {
+      clearInterval(scanTimer); showView('home'); toast('扫描已停止，结果已保存');
+    });
+    document.querySelector('#previewResults').addEventListener('click', () => showView('results'));
+    document.querySelector('.results-toolbar .primary').addEventListener('click', () => toast('下一步：选择恢复目标位置'));
+  </script>
+  <style>
+    .toast { position: fixed; z-index: 10; left: 50%; bottom: 28px; padding: 11px 17px; border: 1px solid #cbd5e1; border-radius: 11px; color: #fff; background: #1e293b; box-shadow: var(--shadow); opacity: 0; transform: translate(-50%, 12px); transition: .2s ease; pointer-events: none; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+  </style>
+</body>
+</html>

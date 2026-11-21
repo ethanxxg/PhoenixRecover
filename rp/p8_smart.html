@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>P8 磁盘健康 - PhoenixRecover 原型</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="p8">
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <div class="title">PhoenixRecover</div><div class="ver">v1.0</div>
+      </div>
+      <div class="top-actions">
+        <a class="btn" href="index.html">原型入口</a>
+      </div>
+    </div>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="nav">
+          <div class="nav-group">数据恢复</div>
+          <a href="p1_location.html" data-page="p1">数据恢复</a>
+          <div class="nav-group">工具</div>
+          <a href="p6_repair.html" data-page="p6">文件修复</a>
+          <a href="p7_imaging.html" data-page="p7">磁盘镜像</a>
+          <a class="active" href="p8_smart.html" data-page="p8">磁盘健康</a>
+        </div>
+      </aside>
+
+      <main class="content">
+        <div class="page-title">磁盘健康监测</div>
+        <div class="note">基于 S.M.A.R.T. 数据实时监控磁盘健康状态，提前预警潜在故障。</div>
+
+        <div class="section">
+          <h3>磁盘列表</h3>
+          <div class="card-grid" style="grid-template-columns:repeat(auto-fit, minmax(300px, 1fr))">
+            <div class="card selected" data-smart-disk="0" style="flex-direction:column;align-items:stretch;padding:16px">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                <div class="icon" style="width:42px;height:42px;font-size:18px">💻</div>
+                <div style="flex:1">
+                  <div class="name">Samsung 970 EVO Plus (C:)</div>
+                  <div class="sub">NVMe SSD · 500 GB · NTFS</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px">
+                <div id="score0" style="width:56px;height:56px;border-radius:50%;background:conic-gradient(var(--success) 0% 92%, #e5e7eb 92%);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px">
+                  <span style="background:#fff;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center">92</span>
+                </div>
+                <div>
+                  <div style="font-weight:800;color:var(--success)">良好</div>
+                  <div class="mini">温度：38°C · 通电 12,456 小时</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" data-smart-disk="1" style="flex-direction:column;align-items:stretch;padding:16px">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                <div class="icon" style="width:42px;height:42px;font-size:18px">💻</div>
+                <div style="flex:1">
+                  <div class="name">WD Blue 1TB (D:)</div>
+                  <div class="sub">SATA HDD · 1 TB · NTFS</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px">
+                <div id="score1" style="width:56px;height:56px;border-radius:50%;background:conic-gradient(var(--warning) 0% 68%, #e5e7eb 68%);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px">
+                  <span style="background:#fff;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center">68</span>
+                </div>
+                <div>
+                  <div style="font-weight:800;color:var(--warning)">警告</div>
+                  <div class="mini">温度：45°C · 通电 38,920 小时</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" data-smart-disk="2" style="flex-direction:column;align-items:stretch;padding:16px">
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+                <div class="icon" style="width:42px;height:42px;font-size:18px">🔌</div>
+                <div style="flex:1">
+                  <div class="name">Seagate Portable (E:)</div>
+                  <div class="sub">USB HDD · 2 TB · exFAT</div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px">
+                <div id="score2" style="width:56px;height:56px;border-radius:50%;background:conic-gradient(var(--danger) 0% 31%, #e5e7eb 31%);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:18px">
+                  <span style="background:#fff;width:42px;height:42px;border-radius:50%;display:flex;align-items:center;justify-content:center">31</span>
+                </div>
+                <div>
+                  <div style="font-weight:800;color:var(--danger)">危险</div>
+                  <div class="mini">温度：52°C · 通电 56,100 小时</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section">
+          <h3>S.M.A.R.T. 关键属性 — <span id="smartDiskName">Samsung 970 EVO Plus (C:)</span></h3>
+          <table>
+            <thead>
+              <tr>
+                <th style="width:60px">ID</th>
+                <th>属性名称</th>
+                <th style="width:80px">当前值</th>
+                <th style="width:80px">阈值</th>
+                <th style="width:100px">原始值</th>
+                <th style="width:80px">状态</th>
+              </tr>
+            </thead>
+            <tbody id="smartTableBody">
+              <tr>
+                <td>05</td>
+                <td>重映射扇区计数</td>
+                <td>100</td>
+                <td>10</td>
+                <td>0</td>
+                <td><span class="tag h">良好</span></td>
+              </tr>
+              <tr>
+                <td>C5</td>
+                <td>当前待映射扇区</td>
+                <td>100</td>
+                <td>0</td>
+                <td>0</td>
+                <td><span class="tag h">良好</span></td>
+              </tr>
+              <tr>
+                <td>C6</td>
+                <td>无法修正的扇区</td>
+                <td>100</td>
+                <td>0</td>
+                <td>0</td>
+                <td><span class="tag h">良好</span></td>
+              </tr>
+              <tr>
+                <td>C2</td>
+                <td>温度</td>
+                <td>62</td>
+                <td>0</td>
+                <td>38°C</td>
+                <td><span class="tag h">良好</span></td>
+              </tr>
+              <tr>
+                <td>09</td>
+                <td>通电时间</td>
+                <td>88</td>
+                <td>0</td>
+                <td>12,456 h</td>
+                <td><span class="tag h">良好</span></td>
+              </tr>
+              <tr>
+                <td>F1</td>
+                <td>总写入量 (TBW)</td>
+                <td>75</td>
+                <td>0</td>
+                <td>68.2 TB</td>
+                <td><span class="tag h">良好</span></td>
+              </tr>
+              <tr>
+                <td>B1</td>
+                <td>磨损均衡计数</td>
+                <td>92</td>
+                <td>0</td>
+                <td>8%</td>
+                <td><span class="tag h">良好</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="footer-actions">
+          <button class="btn" id="smartRefresh" type="button">刷新数据</button>
+          <a class="btn" href="#" onclick="alert('原型占位：导出 S.M.A.R.T. 报告');return false;">导出报告</a>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

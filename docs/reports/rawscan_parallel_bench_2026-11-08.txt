@@ -1,0 +1,41 @@
+### RUN A — RawScan::Run direct
+=== PhoenixRecover RAW-scan parallel benchmark (A1-11) ===
+compiler            : 7.3.0
+build               : Release (NDEBUG)
+hardware_concurrency: 32
+image               : bench_rawscan_parallel.dd, 256 MiB (268435456 bytes), 512 B sectors
+filler              : constant 0x5A, 1023 planted graphic magics @ 256 KiB
+entry point         : RawScan::Run direct
+repeats             : 3 (median reported)
+
+[2026-11-08 16:30:49.490] [INFO ] SectorReader::OpenImage ok 
+threads    median(ms)           MB/s    speedup      files  identical
+-------- ------------ -------------- ---------- ---------- ----------
+1              1352.6          189.3       1.00x       1023        yes
+2               718.1          356.5       1.88x       1023        yes
+4               416.7          614.3       3.25x       1023        yes
+8               271.4          943.3       4.98x       1023        yes
+
+file-set equivalence vs serial: PASS
+CSV written to D:/dev/PhoenixRecover/docs/reports/rawscan_parallel_bench_2026-11-08_direct.csv
+
+### RUN B — CarveModuleService (A1-10 production config chain)
+=== PhoenixRecover RAW-scan parallel benchmark (A1-11) ===
+compiler            : 7.3.0
+build               : Release (NDEBUG)
+hardware_concurrency: 32
+image               : bench_rawscan_parallel.dd, 256 MiB (268435456 bytes), 512 B sectors
+filler              : constant 0x5A, 1023 planted graphic magics @ 256 KiB
+entry point         : CarveModuleService::Run (A1-10 production config chain)
+repeats             : 3 (median reported)
+
+[2026-11-08 16:31:01.041] [INFO ] SectorReader::OpenImage ok 
+threads    median(ms)           MB/s    speedup      files  identical
+-------- ------------ -------------- ---------- ---------- ----------
+1              1357.1          188.6       1.00x       1023        yes
+2               722.8          354.2       1.88x       1023        yes
+4               424.7          602.8       3.20x       1023        yes
+8               274.7          932.0       4.94x       1023        yes
+
+file-set equivalence vs serial: PASS
+CSV written to D:/dev/PhoenixRecover/docs/reports/rawscan_parallel_bench_2026-11-08_service.csv

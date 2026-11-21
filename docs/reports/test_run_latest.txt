@@ -1,0 +1,61 @@
+[2026-06-04 10:43:59.704] [INFO ] SectorReader::OpenImage ok 
+=== L0_Graphic.dd (L0_contiguous) RawScan found=888 ===
+  OK carve 000_0021.png exact @0x4E2000 size=12966639
+  OK carve 02010025.pcx exact @0x1621C00 size=806664
+  OK carve 09260002.jpg exact @0x1BC8C00 size=60716
+  OK carve 100_0304crop.bmp exact @0x20B9A00 size=5111906
+  OK carve 100_0018.tif exact @0x2A7BC00 size=14969328
+  OK carve 100_0183.gif exact @0x3DA4600 size=132948
+L0_Graphic.dd: ALL OK (6 files)
+
+=== L1_Graphic.dd (L1_frag_in_order) RawScan found=826 ===
+  OK carve 09260002.jpg header @0x4E2000 carved=60716 embed=30208
+  OK carve 100_0018.tif header @0x9D2E00 carved=14969328 embed=4989440
+  OK carve 100_0304crop.bmp header @0x1CFB800 carved=5111906 embed=2555904
+  OK carve 02010025.pcx header @0x26BDA00 carved=806664 embed=268800
+  OK carve 100_0183.gif header @0x2C64A00 carved=132948 embed=66048
+  OK carve 000_0021.png header @0x3167200 carved=12966639 embed=4321792
+L1_Graphic.dd: ALL OK (6 files)
+
+=== L2_Graphic.dd (L2_frag_disorder) RawScan found=824 ===
+  OK carve 100_0018.tif header @0x4E2000 carved=59649536 embed=4989440
+  OK carve 09260002.jpg header @0x180AA00 carved=59649536 embed=19968
+  OK carve 100_0304crop.bmp header @0x1F6BA00 carved=59649536 embed=2555904
+  OK carve 02010025.pcx header @0x26BDA00 carved=806663 embed=268800
+  OK carve 100_0183.gif header @0x2C6FA00 carved=59649536 embed=88064
+  OK carve 000_0021.png header @0x3796200 carved=59649536 embed=6482944
+L2_Graphic.dd: ALL OK (6 files)
+
+=== L3_Graphic.dd (L3_missing_frags) RawScan found=413 ===
+  OK carve 09260002.jpg header @0x4E2000 carved=5201298 embed=30208
+  OK carve 100_0018.tif header @0x9CB600 carved=37965824 embed=9978880
+  OK carve 100_0304crop.bmp header @0x1831A00 carved=37965824 embed=2556002
+  OK carve 02010025.pcx header @0x1F83C00 carved=792946 embed=268800
+  OK carve 100_0183.gif header @0x24E9200 carved=37965824 embed=44032
+  OK carve 000_0021.png header @0x29E0E00 carved=37965824 embed=4323055
+L3_Graphic.dd: ALL OK (6 files)
+
+=== L4_Graphic.dd (L4_extra_partial) RawScan found=840 ===
+  OK carve 09260002.jpg header @0x4E2000 carved=34041 embed=30208
+  OK carve 02010026.jpg header @0x4E9600 carved=61038 embed=61038
+  OK carve 100_0304crop.bmp header @0x9E1E00 carved=5111906 embed=1703936
+  OK carve 100_0018.tif header @0xB81E00 carved=14969328 embed=14969328
+  OK carve 02010025.pcx header @0x21EAA00 carved=38871040 embed=402944
+  OK carve 100_0183.gif header @0x224D000 carved=38871040 embed=88064
+  OK carve 000_0021.png header @0x2262800 carved=12966639 embed=12966639
+L4_Graphic.dd: ALL OK (7 files)
+
+=== L5_Graphic.dd (L5_interleaved) RawScan found=847 ===
+  OK carve 09260002.jpg header @0x4E2000 carved=771926 embed=30208
+  OK carve 100_0304crop.bmp header @0x4E9600 carved=5111906 embed=2555904
+  OK carve 100_0018.tif header @0xEB3000 carved=34803200 embed=4989440
+  OK carve 02010025.pcx header @0x1375200 carved=44828672 embed=268800
+  OK carve 100_0183.gif header @0x22A0A00 carved=44828672 embed=66048
+  OK carve 000_0021.png header @0x22B0C00 carved=44828672 embed=6482944
+L5_Graphic.dd: ALL OK (6 files)
+
+CSV: d:\dev\PhoenixRecover\docs\reports\file_carving_graphic_results.csv
+
+Summary: 6/6 images ALL OK, failures=0
+Regression gate: L0+L1 fails=0, embed fails=0, carve-only (L2-L5)=0
+OK: file-carving-images L0-L5 Graphic vs CFReDS layouts

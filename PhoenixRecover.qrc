@@ -1,0 +1,16 @@
+<RCC>
+    <qresource prefix="PhoenixRecover">
+        <file alias="icons/app_icon.svg">resources/icons/app_icon.svg</file>
+        <file alias="icons/scan.svg">resources/icons/scan.svg</file>
+        <file alias="icons/recover.svg">resources/icons/recover.svg</file>
+        <file alias="icons/repair.svg">resources/icons/repair.svg</file>
+        <file alias="icons/imaging.svg">resources/icons/imaging.svg</file>
+        <file alias="icons/smart.svg">resources/icons/smart.svg</file>
+        <file alias="icons/folder.svg">resources/icons/folder.svg</file>
+        <file alias="icons/file.svg">resources/icons/file.svg</file>
+        <file alias="icons/check.svg">resources/icons/check.svg</file>
+        <file alias="icons/warning.svg">resources/icons/warning.svg</file>
+        <file alias="icons/error.svg">resources/icons/error.svg</file>
+        <file alias="styles/main.qss">resources/styles/main.qss</file>
+    </qresource>
+</RCC>

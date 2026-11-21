@@ -1,0 +1,3 @@
+[engine] DISCOVERY NtfsParser::ScanMetadata/GetAllFiles nodes=11134 badSectors=0
+[engine] FORMAT SignatureDB built-in signatures=513
+[engine] scan wrote 11134 nodes -> docs/reports/real_disk_recovery_2026-11-14/engine_nodes_vol63.csv | engineFormatProbes=9856 prefixReadOk=9855

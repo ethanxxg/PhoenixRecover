@@ -1,0 +1,15 @@
+ok:   write noise images
+[2026-11-08 17:27:06.283] [INFO ] SectorReader::OpenImage ok ok:   noise-only FP set is deterministic across replays
+ok:   write planted image
+
+--- CAR-002 RAW carving false-positive metrics ---
+image_MiB,seed,planted,case_A_FP,case_A_FP_per_MiB,TP,FP,FN,precision_pct,recall_pct
+8.0,12648430,16,115,14.38,16,109,0,12.80,100.00
+case_A_reported=115 case_B_reported=125
+
+ok:   all planted header-only magics recovered (TP)
+ok:   no planted magic missed (FN == 0)
+ok:   recall >= 99% on planted set
+ok:   FP/MiB metric computed
+ok:   every reported offset classified exactly once
+OK: RawScanFalsePositive 8 checks, 0 failure(s)

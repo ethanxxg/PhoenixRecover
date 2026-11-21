@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>P6 文件修复 - PhoenixRecover 原型</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-page="p6">
+  <div class="app">
+    <div class="topbar">
+      <div class="brand">
+        <div class="title">PhoenixRecover</div><div class="ver">v1.0</div>
+      </div>
+      <div class="top-actions">
+        <a class="btn" href="index.html">原型入口</a>
+      </div>
+    </div>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <div class="nav">
+          <div class="nav-group">数据恢复</div>
+          <a href="p1_location.html" data-page="p1">数据恢复</a>
+          <div class="nav-group">工具</div>
+          <a class="active" href="p6_repair.html" data-page="p6">文件修复</a>
+          <a href="p7_imaging.html" data-page="p7">磁盘镜像</a>
+          <a href="p8_smart.html" data-page="p8">磁盘健康</a>
+        </div>
+      </aside>
+
+      <main class="content">
+        <div class="page-title">文件修复</div>
+        <div class="note">选择损坏的文件，PhoenixRecover 将尝试修复其内部结构并恢复可用性。</div>
+        <div class="note" style="margin-top:4px">支持格式：<b>ZIP</b> / <b>MP4</b> / <b>JPEG</b> / <b>PNG</b></div>
+
+        <div class="section" id="repairStep1">
+          <h3>步骤 1：选择损坏的文件</h3>
+          <div class="card" id="repairDropZone" style="border:2px dashed #cfd6df;text-align:center;padding:40px 20px;cursor:pointer;border-radius:12px">
+            <div style="font-size:36px;margin-bottom:10px">📂</div>
+            <div style="font-weight:800;margin-bottom:6px">拖拽文件到此处</div>
+            <div class="note" style="margin:0">或点击浏览文件</div>
+            <input type="file" id="repairFileInput" style="display:none" multiple />
+          </div>
+          <div id="repairFileList" style="margin-top:12px"></div>
+          <div class="footer-actions" style="margin-top:14px">
+            <button class="btn primary" id="repairAnalyze" type="button">开始分析</button>
+          </div>
+        </div>
+
+        <div class="section hidden" id="repairStep2">
+          <h3>步骤 2：分析中...</h3>
+          <div class="kv" style="grid-template-columns:1fr 1fr 1fr">
+            <div class="item"><div class="k">文件名</div><div class="v" id="repairFileName">damaged_photo.jpg</div></div>
+            <div class="item"><div class="k">文件类型</div><div class="v" id="repairFileType">JPEG 图片</div></div>
+            <div class="item"><div class="k">损坏程度</div><div class="v" id="repairDamageLevel" style="color:var(--warning)">中度损坏</div></div>
+          </div>
+          <div style="margin-top:16px">
+            <div style="height:8px;border-radius:999px;background:#e5e7eb;overflow:hidden;border:1px solid #e6eaf2">
+              <div id="repairProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,var(--primary),#7c3aed);transition:width .3s"></div>
+            </div>
+            <div class="note" style="margin-top:6px;text-align:center" id="repairProgressText">正在分析文件结构...</div>
+          </div>
+        </div>
+
+        <div class="section hidden" id="repairStep3">
+          <h3>步骤 3：修复结果</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>文件名</th>
+                <th style="width:100px">类型</th>
+                <th style="width:100px">损坏程度</th>
+                <th style="width:100px">修复状态</th>
+                <th style="width:120px">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>damaged_photo.jpg</td>
+                <td>JPEG</td>
+                <td><span class="tag m">中度</span></td>
+                <td><span class="tag h">成功</span></td>
+                <td><a class="btn" style="height:28px;font-size:12px" href="#" onclick="alert('原型占位：下载修复文件');return false;">下载</a></td>
+              </tr>
+              <tr>
+                <td>archive.zip</td>
+                <td>ZIP</td>
+                <td><span class="tag l">严重</span></td>
+                <td><span class="tag l">失败</span></td>
+                <td><span style="color:#9ca3af;font-size:12px">无法修复</span></td>
+              </tr>
+              <tr>
+                <td>video_clip.mp4</td>
+                <td>MP4</td>
+                <td><span class="tag h">轻微</span></td>
+                <td><span class="tag h">成功</span></td>
+                <td><a class="btn" style="height:28px;font-size:12px" href="#" onclick="alert('原型占位：下载修复文件');return false;">下载</a></td>
+              </tr>
+              <tr>
+                <td>screenshot.png</td>
+                <td>PNG</td>
+                <td><span class="tag m">中度</span></td>
+                <td><span class="tag h">成功</span></td>
+                <td><a class="btn" style="height:28px;font-size:12px" href="#" onclick="alert('原型占位：下载修复文件');return false;">下载</a></td>
+              </tr>
+            </tbody>
+          </table>
+          <div class="footer-actions" style="margin-top:14px">
+            <button class="btn" id="repairBack" type="button">返回</button>
+            <a class="btn primary" href="#" onclick="alert('原型占位：下载全部修复文件');return false;">下载全部</a>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,100 @@
+{
+  "generatedAt": "2026-11-14T16:22:00",
+  "toolchain": "MSYS2 MinGW GCC 14.2.0 / build-gcc14 / PHOENIX_BUILD_GUI=OFF / PHOENIX_BUILD_REALDISK_TOOLS=ON",
+  "purpose": "Durable evidence that the engine itself is under a regression gate, not only one-off byte comparison.",
+  "tests": [
+    {
+      "name": "RecoverOutputCollision",
+      "source": "tests/test_recover_output_collision.cpp",
+      "discoveredOn": "batch_003: 1287 files failed with Cannot create target directory",
+      "positiveExit": 0,
+      "ctestSingle": "1/1 Passed (0.04 s)",
+      "negativeEnv": "PHOENIX_NEGATIVE_COLLISION_GUARD=1",
+      "negativeExit": 1
+    },
+    {
+      "name": "NtfsAdsStream",
+      "source": "tests/test_ntfs_ads_stream.cpp",
+      "discoveredOn": "batch_003: Zone.Identifier ADS produced 11 false mismatches / 4 id collisions",
+      "positiveExit": 0,
+      "ctestSingle": "1/1 Passed (0.03 s)",
+      "negativeEnv": "PHOENIX_NEGATIVE_ADS_GUARD=1",
+      "negativeExit": 1
+    },
+    {
+      "name": "EngineScanFormatMatch",
+      "source": "tests/test_engine_scan_format_match.cpp",
+      "discoveredOn": "P0-6 user requirement: discovery, recovery AND format matching must all be engine code",
+      "positiveExit": 0,
+      "ctestSingle": "1/1 Passed (0.05 s), 36 checks / 0 failures",
+      "negativeEnv": "PHOENIX_NEGATIVE_ENGINE_FORMAT_GUARD=1",
+      "negativeExit": 1,
+      "negativeFailures": 6,
+      "guards": [
+        "engine signature DB classifies real magic (jpg/png/pdf/zip/gif/wav with RIFF secondary)",
+        "a magic/extension conflict must be resolved by payload, not by filename",
+        "AC matcher == legacy Linear matcher",
+        "ScanBatch streaming format scan finds a header at its disk offset",
+        "source-level: headless calls ScanMetadata/GetAllFiles/RecoverBatch/SignatureDB/ReadFileDataPrefix",
+        "source-level: orchestrator CANDIDATE_SOURCE = engine, no oracle candidate csv"
+      ]
+    },
+    {
+      "name": "NtfsAttributeList",
+      "source": "tests/test_ntfs_attribute_list.cpp",
+      "discoveredOn": "P0-7: real-disk MFT record 78 had 56725784 bytes in $ATTRIBUTE_LIST extension records but engine reported clusterCount=0",
+      "positiveExit": 0,
+      "ctestSingle": "1/1 Passed (0.04 s)",
+      "negativeEnv": "PHOENIX_NEGATIVE_ATTRLIST_GUARD=1",
+      "negativeExit": "0 (guard trips 4 checks and prints NEGATIVE GUARD OK, matching the CTest-exe convention)",
+      "negativeFailures": 4,
+      "guards": [
+        "synthetic NTFS volume: base record has $FILE_NAME + $ATTRIBUTE_LIST but NO $DATA",
+        "extension entries deliberately out of VCN order -> clusters must be [48,49], not [49,48]",
+        "authoritative size taken only from the VCN0 segment (VCN1 repeats 0)",
+        "RecoverEngine::RecoverBatch writes the exact 1500 payload bytes",
+        "extension records without $FILE_NAME must not become nodes",
+        "negative guard omits $ATTRIBUTE_LIST -> cluster/byte gates MUST fail"
+      ]
+    }
+  ],
+  "combinedCtest": "ctest --output-on-failure -R ^(EngineScanFormatMatch|NtfsAttributeList|NtfsAdsStream|RecoverOutputCollision|SignatureDBAC|SignatureDBLoad|RawScanAC|RawScanParallel|RawScanParallelWiring|DeepScanFallback|SignatureMatcher|ScanProgress|ExfatRecoverBytes|FormattedVolumeRecovery|DFTT_NTFS_RecoverBytes)$ --timeout 900 -> 15/15 Passed (41.69 s)",
+  "DFTT_NTFS_RecoverBytes": {
+    "directRunExit": 0,
+    "goldenMd5": "9/9",
+    "note": "also included in the 15/15 bounded CTest regression above (0.17 s)"
+  },
+  "P0_6_engineScanAndFormat": {
+    "driver": "tools/phoenix_headless.cpp (scan / recover), output phoenix_headless_p06.exe",
+    "discovery": "NtfsParser::ScanMetadata() + GetAllFiles()",
+    "recovery": "RecoverEngine::RecoverBatch()",
+    "formatMatcher": "SignatureDB::Match(AC) 513 built-in signatures + FormatPayloadScoreUtil::Score/ProbeExtension",
+    "prefixRead": "RecoverEngine::ReadFileDataPrefix() (resident / compressed / runlist aware)",
+    "engineNodes": {"63": 11134, "209728638": 940662},
+    "engineFormatProbes": {"63": 9856, "209728638": 8174},
+    "signatureHitsInScanSample": {"63": 8765, "209728638": 860},
+    "coverageTool": "tools/verify_engine_scan.py",
+    "coverageConclusion": "ENGINE DISCOVERY COVERS ALL 879546 PLAN IDS",
+    "coverageNegativeGuardExit": 1,
+    "oracleRole": "independent byte-level verification truth only (never a discovery source)",
+    "engineDrivenPlan": "plan_engine.json (candidateSource=engine, 4 batches / 762624 files / 62.96 GiB, batches 4-7)"
+  },
+  "P0_7_attributeListFix": {
+    "driver": "phoenix_headless_p07.exe (same sources, immutable snapshot; p06 kept for the running batch loop)",
+    "gapEvidenceTool": "tools/verify_engine_gaps.py",
+    "gapEvidence": "engine_gap_evidence.json: 1 real gap (id 78 / 56725784 bytes) + 1 noPayloadDeletedExtension (id 269279)",
+    "gapNegativeGuardExit": 1,
+    "fix": "fs/ntfs/NtfsParser.cpp follows resident $ATTRIBUTE_LIST unnamed $DATA entries, sorts by lowestVCN, merges runlists with sparse gaps, takes dataSize only from VCN0",
+    "beforeFixClusterCount": 0,
+    "afterFixClusterCount": 13850,
+    "engineRecoveredSha256": "4992458186e62e89a61cffc34b90a99629ad5df80b41d9763a8f62397c9d536c",
+    "independentTruthSha256": "4992458186e62e89a61cffc34b90a99629ad5df80b41d9763a8f62397c9d536c",
+    "byteExact": true,
+    "fixVerificationTool": "tools/verify_engine_fix.py",
+    "fixNegativeGuardExit": 1,
+    "sourceDiskWriteOperations": 0
+  },
+  "productionEngineSourceModified": true,
+  "productionEngineChange": "fs/ntfs/NtfsParser.cpp ONLY (P0-7 $ATTRIBUTE_LIST resolution). P0-6 deliberately left scan/ fs/ recover/ untouched; P0-7 fixes a defect that the P0-6 engine-driven discovery exposed, with a synthetic NTFS CTest + negative guard + 15/15 bounded regression.",
+  "note": "Changed: tools/phoenix_headless.cpp, tools/batch_recover.py, tools/mft_oracle.py, tools/verify_engine_scan.py, tools/verify_engine_gaps.py, tools/verify_engine_fix.py, tests/CMakeLists.txt, tests/test_engine_scan_format_match.cpp, tests/test_ntfs_attribute_list.cpp, fs/ntfs/NtfsParser.cpp. SectorReader read-ahead window remains default-OFF."
+}

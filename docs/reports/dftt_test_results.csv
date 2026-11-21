@@ -1,0 +1,11 @@
+dftt_id,image_path,ctest_name,status,duration_sec,notes
+6,testdata/dftt/6-undel-fat/6-fat-undel.dd,DFTT_FAT_Undelete,PASS,0.06,"13 nodes"
+6,testdata/dftt/6-undel-fat/6-fat-undel.dd,DFTT_FAT_RecoverBytes,PASS,75,"6/6 golden MD5; free-run indexed cluster MD5"
+7,testdata/dftt/7-undel-ntfs/7-ntfs-undel.dd,DFTT_NTFS_Undelete,PASS,0.09,"15 nodes"
+7,testdata/dftt/7-undel-ntfs/7-ntfs-undel.dd,DFTT_NTFS_RecoverBytes,PASS,0.07,"9/9 golden MD5 incl. mult1.dat:ADS; leap-day 2004-02-29 timestamp"
+-,—,DFTT_Recover_GoldenBundle,PASS,0.27,"no duplicate recover run"
+10,testdata/dftt/10-ntfs-autodetect/10-ntfs-disk.dd,PartitionProbe,PASS,0.01,"NTFS+ext4 part1; NTFS+UFS1 part2 dual-FS detect"
+11,testdata/dftt/11-carve-fat/11-carve-fat.dd,DFTT_11_CARVE_FAT,PASS,2.28,"14/14 required golden MD5 (official carve set); haxor2 negative"
+8,testdata/dftt/8-jpeg-search/8-jpeg-search.dd,DFTT_8_JPEG_SEARCH,PASS,1.09,"FS 4/4; embed 6/6 required JPEG scenarios"
+12,testdata/dftt/12-carve-ext2/12-carve-ext2.dd,DFTT_12_CARVE_EXT2,SKIP,0.09,"zip corrupt / dd missing — needs valid mirror"
+14,testdata/dftt/14-iso9660-1/*.iso,DFTT_14_ISO9660_SMOKE,PASS,0.12,"CD001 PVD at 16*2048"
