@@ -5,6 +5,7 @@
 #include "../../disk/SectorReader.h"
 #include <vector>
 #include <string>
+#include <memory>
 #include <set>
 #include <unordered_map>
 #include <atomic>
@@ -37,6 +38,13 @@ public:
     uint32_t GetJournalCommitCount()   const { return m_journalCommits; }
     uint32_t GetJournalOverlayBlocks() const
          { return static_cast<uint32_t>(m_overlay.size()); }
+
+    // ── External journal device (s_journal_dev != 0, s_journal_inum == 0) ──
+    // ext4 may keep the JBD log on a separate device.  Recovery cannot guess
+    // that device from the volume image, so the caller must supply it
+    // explicitly before Open().  The superblock journal UUID is verified
+    // against the external journal's s_uuid; a mismatch refuses replay.
+    bool SetExternalJournalImage(const std::wstring& imagePath);
 
 private:
     // ── Inode reading ─────────────────────────────────────────────────────
@@ -168,6 +176,8 @@ private:
     // block number -> sequence of the last revoke record naming it
     std::unordered_map<uint64_t, uint32_t>             m_revoke;
     uint32_t m_journalCommits = 0;
+    std::unique_ptr<SectorReader> m_externalJournal;
+    bool m_externalJournalReady = false;
 
     std::vector<FileNode> m_files;
     uint64_t              m_nextId      = 1;

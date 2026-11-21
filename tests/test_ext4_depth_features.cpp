@@ -32,6 +32,12 @@
 //                   third transaction logs a directory block that is then
 //                   REVOKED, so a replay that ignores revokes produces a wrong
 //                   file list (poison.txt appears, keep.txt disappears).
+//   ext4-journal-torn  synthetic power loss: txn 101 has descriptor + data but
+//                   no commit.  Only the earlier committed txn 100 may replay;
+//                   a pending transaction must never become visible.
+//   ext4-journal-v1    original JBD (ext3-era) superblock type 3 and 8-byte
+//                   tags with a trailing 16-byte UUID.  Parsing them with the
+//                   JBD2 tag rule desyncs the log; the same bytes must replay.
 //   ext4-journal-clean  identical journal bytes with s_start = 0: a
 //                   checkpointed log must replay nothing at all.
 //   ext4-journal-csum2 / -csum3  JBD2 checksum v2 (16-bit tag CRC) and v3
@@ -41,6 +47,13 @@
 //   ext4-journal-csum-bad  v3 journal with the first commit checksum flipped:
 //                   the engine must refuse the transaction (0 replays).  A
 //                   corrupt-log overlay is silent wrong data, worse than none.
+//   ext4-flex-bg-gdt  two groups with FLEX_BG relocation: group 1's inode
+//                   table lives in group 0 and the correct group descriptor
+//                   only exists in the committed log.  Without reloading the
+//                   GDT after replay, inode 65 / far.txt is silently lost.
+//   ext4-journal-external  s_journal_dev: the log is a separate image.  The
+//                   engine must verify its UUID against the volume and refuse
+//                   replay when no external source was supplied.
 //
 // Also asserts the scan-source read-only invariant per image (whole-image
 // FNV-1a unchanged after scan + recovery).
@@ -116,6 +129,8 @@ struct Fixture
     bool                     hasJournal = false;
     long long                jnlApplied = -1;   // transactions contributing blocks
     long long                jnlBlocks  = -1;   // overlaid blocks
+    bool                     v1         = false;
+    std::wstring             externalJournalPath;
     std::vector<std::string> absent;
 };
 
@@ -151,6 +166,8 @@ bool LoadManifest(const std::wstring& jsonPath, Fixture& fx)
     if (const phoenix::JsonValue* v = root.Find("variant")) fx.variant = v->AsString();
     if (const phoenix::JsonValue* v = root.Find("imageBytes"))
         fx.imageBytes = static_cast<long long>(v->AsNumber());
+    if (const phoenix::JsonValue* v = root.Find("externalJournalPath"))
+        fx.externalJournalPath = Utils::Utf8ToWide(v->AsString());
     if (const phoenix::JsonValue* v = root.Find("partitionStartSector"))
         fx.startSector = static_cast<long long>(v->AsNumber());
 
@@ -160,6 +177,8 @@ bool LoadManifest(const std::wstring& jsonPath, Fixture& fx)
             fx.jnlApplied = static_cast<long long>(v->AsNumber());
         if (const phoenix::JsonValue* v = j->Find("overlayBlocks"))
             fx.jnlBlocks = static_cast<long long>(v->AsNumber());
+        // JsonValue has no AsBool(); the fixture name is the stable marker.
+        fx.v1 = (fx.variant == "ext4-journal-v1");
     }
     if (const phoenix::JsonValue* a = root.Find("absent")) {
         if (a->IsArray())
@@ -335,6 +354,13 @@ void RunVariant(const Fixture& fx, bool autoProbe)
         CHECK(dynamic_cast<Ext4Parser*>(parser.get()) != nullptr,
               "empty fsType resolves to Ext4Parser");
     }
+    if (!fx.externalJournalPath.empty()) {
+        const std::wstring jpath = FixtureDir() + L"/" + fx.externalJournalPath;
+        Ext4Parser* ep = dynamic_cast<Ext4Parser*>(parser.get());
+        CHECK(ep != nullptr, "external-journal variant resolves to Ext4Parser");
+        CHECK(ep && ep->SetExternalJournalImage(jpath),
+              "external journal device is opened before volume Open");
+    }
     CHECK(parser->Open(reader, part), "Ext4Parser::Open accepts the fixture");
     CHECK(parser->ScanMetadata(), "Ext4Parser::ScanMetadata completes");
 
@@ -353,6 +379,9 @@ void RunVariant(const Fixture& fx, bool autoProbe)
                   "journal replay applied the expected transaction count");
             CHECK(static_cast<long long>(ep->GetJournalOverlayBlocks()) == fx.jnlBlocks,
                   "journal overlay holds the expected block count");
+            if (fx.v1)
+                CHECK(ep->GetJournalCommitCount() > 0,
+                      "JBD v1 inline-UUID tags were parsed (not silently refused)");
         }
     }
 
@@ -439,6 +468,8 @@ int main()
         {"ext4-inline",        false},
         {"ext4-sparse",        false},  // depth-1 extent tree + holes, legacy indirect hole
         {"ext4-journal",       false},  // JBD2 replay: recovered from the log only
+        {"ext4-journal-torn",  false},  // torn commit: discard the pending txn
+        {"ext4-journal-v1",    false},  // JBD v1: be32 flags + inline 16-byte UUID
         {"ext4-journal-clean", false},  // s_start == 0 must replay nothing
         // JBD2 checksum v2/v3: tag/commit/descriptor CRC32C must verify and
         // replay the same bytes; a corrupted commit checksum must refuse ALL
@@ -446,6 +477,8 @@ int main()
         {"ext4-journal-csum2", false},
         {"ext4-journal-csum3", false},
         {"ext4-journal-csum-bad", false},
+        {"ext4-flex-bg-gdt",   false},  // FLEX_BG + replayed cross-group GDT
+        {"ext4-journal-external", false},  // s_journal_dev + UUID-matched log
     };
 
     for (const VariantSpec& v : variants) {

@@ -348,8 +348,10 @@ def crc32c(data, state=0xFFFFFFFF):
 
 # ── JBD2 record writers (all fields big-endian) ─────────────────────────────
 JBD2_MAGIC = 0xC03B3998
-JBD2_DESCRIPTOR, JBD2_COMMIT, JBD2_SB_V2, JBD2_REVOKE = 1, 2, 4, 5
+JBD2_DESCRIPTOR, JBD2_COMMIT = 1, 2
+JBD2_SB_V1, JBD2_SB_V2, JBD2_REVOKE = 3, 4, 5
 JBD2_FLAG_LAST_TAG = 0x0008
+JBD2_FLAG_SAME_UUID = 0x0002
 JBD2_INCOMPAT_REVOKE = 0x0001
 JBD2_INCOMPAT_CSUM_V2 = 0x0008
 JBD2_INCOMPAT_CSUM_V3 = 0x0010
@@ -390,6 +392,37 @@ def jbd_super(bs, maxlen, first, seq, start, csum=0):
         struct.pack_into(">I", buf, 0xFC, jbd_crc(bytes(buf), jbd_seed()))
         return bytes(buf)
     return b + b"\x00" * (bs - len(b))
+
+
+def jbd_super_v1(bs, maxlen, first, seq, start):
+    """JBD (v1) journal superblock: blocktype 3, no feature/checksum fields.
+
+    The service is still read by the same offsets as JBD2 for blocksize,
+    maxlen, first, sequence and start; bytes from 0x20 onward are reserved.
+    """
+    b = struct.pack(">III", JBD2_MAGIC, JBD2_SB_V1, 0)
+    b += struct.pack(">IIIIII", bs, maxlen, first, seq, start, 0)
+    b += JBD_UUID                                               # s_uuid @ 0x30
+    return b + b"\x00" * (bs - len(b))
+
+
+def jbd_desc_v1(bs, seq, targets, uuid=JBD_UUID):
+    """JBD v1 descriptor: be32 blocknr + be32 flags, then a 16-byte UUID.
+
+    The first tag writes the UUID; later tags set JBD2_FLAG_SAME_UUID so the
+    reader reuses it.  LAST_TAG terminates the array exactly as in v2.
+    """
+    body = bytearray(struct.pack(">III", JBD2_MAGIC, JBD2_DESCRIPTOR, seq))
+    for i, (bn, flags) in enumerate(targets):
+        if i == len(targets) - 1:
+            flags |= JBD2_FLAG_LAST_TAG
+        if i > 0:
+            flags |= JBD2_FLAG_SAME_UUID
+        body += struct.pack(">II", bn, flags)
+        if not (flags & JBD2_FLAG_SAME_UUID):
+            body += uuid
+    assert len(body) <= bs
+    return bytes(body + b"\x00" * (bs - len(body)))
 
 
 def jbd_desc(bs, seq, targets, csum=0, data_blocks=None, bad_tchecksum=False,
@@ -843,11 +876,13 @@ def build_sparse_depth():
 JOURNAL_BLOCKS = 24
 
 
-def build_journal(clean=False, csum=0, corrupt=None):
-    """JBD2 replay: metadata that was committed to the journal but never
+def build_journal(clean=False, csum=0, corrupt=None, v1=False, torn=False):
+    """JBD/JBD2 replay: metadata committed to the journal but never
     checkpointed to its home location.
 
-    csum=0 legacy (no checksum), 2 = CSUM_V2 (16-bit tag csum), 3 = CSUM_V3
+    v1=True uses the original JBD descriptor (8-byte tag + inline UUID),
+    which must not be mistaken for a JBD2 v2 tag.  Otherwise csum=0 legacy
+    v2, 2 = CSUM_V2 (16-bit tag csum), 3 = CSUM_V3
     (32-bit tag csum).  `corrupt` may be 'tag' / 'commit' / 'desc' to poison
     exactly one checksum and prove the engine refuses the whole transaction.
 
@@ -949,6 +984,8 @@ def build_journal(clean=False, csum=0, corrupt=None):
     # the expected outcome is deterministic (later txns would otherwise still
     # restore dir block 0 and hide the refusal).
     def desc(seq, targets, data, first=False):
+        if v1:
+            return jbd_desc_v1(bs, seq, targets)
         bad_tag = (corrupt == 'tag' and first)
         bad_desc = (corrupt == 'desc' and first)
         return jbd_desc(bs, seq, targets, csum=csum,
@@ -960,7 +997,9 @@ def build_journal(clean=False, csum=0, corrupt=None):
                           bad_csum=(corrupt == 'commit' and first))
 
     log = {
-        0:  jbd_super(bs, JOURNAL_BLOCKS, 1, 100, 0 if clean else 1, csum=csum),
+        0:  (jbd_super_v1(bs, JOURNAL_BLOCKS, 1, 100, 0 if clean else 1)
+             if v1 else
+             jbd_super(bs, JOURNAL_BLOCKS, 1, 100, 0 if clean else 1, csum=csum)),
         1:  desc(100, [(itbl_blk, 0), (root_l0, 0)], [itbl_img, dir_v1], first=True),
         2:  itbl_img,
         3:  dir_v1,
@@ -968,7 +1007,7 @@ def build_journal(clean=False, csum=0, corrupt=None):
         5:  desc(101, [(root_l0, 0)], [dir_v2]),
         6:  dir_v2,
         7:  jbd_revoke(bs, [root_l1], csum=csum),
-        8:  commit(101),
+        8:  (b"\x00" * bs if torn else commit(101)),
         9:  desc(102, [(root_l1, 0)], [dir_poison]),
         10: dir_poison,
         11: commit(102),
@@ -1001,6 +1040,26 @@ def build_journal(clean=False, csum=0, corrupt=None):
         journal = {"start": 1, "appliedTransactions": 0, "overlayBlocks": 0,
                    "csum": csum, "corrupt": corrupt}
         absent += ["rescue.bin", "later.txt"]
+    elif torn:
+        name = "ext4-journal-torn"
+        purpose = ("synthetic power loss: transaction 101 has descriptor and "
+                   "data but its commit block was never written; only txn 100 "
+                   "may be replayed")
+        journal = {"start": 1, "appliedTransactions": 1, "overlayBlocks": 2,
+                   "csum": 0, "torn": True}
+        files.append(manifest_entry("\\rescue.bin", "rescue.bin", len(rescue),
+                                    rescue, "normal"))
+        absent += ["later.txt"]
+    elif v1:
+        name = "ext4-journal-v1"
+        purpose = ("JBD v1 replay: descriptor tags carry an inline UUID and "
+                   "be32 flags; parsing them as JBD2 tags must be refused")
+        journal = {"start": 1, "appliedTransactions": 2, "overlayBlocks": 2,
+                   "csum": 0, "v1": True}
+        files.append(manifest_entry("\\rescue.bin", "rescue.bin", len(rescue),
+                                    rescue, "normal"))
+        files.append(manifest_entry("\\later.txt", "later.txt", len(later),
+                                    later, "normal"))
     elif csum:
         name = "ext4-journal-csum2" if csum == 2 else "ext4-journal-csum3"
         purpose = ("JBD2 checksum v%s journal: tag/commit/descriptor CRC32C "
@@ -1039,6 +1098,179 @@ def build_journal(clean=False, csum=0, corrupt=None):
     }
 
 
+INCOMPAT_FLEX_BG = 0x0200
+
+
+def build_flex_bg_gdt():
+    """FLEX_BG + journal-replayed cross-group GDT.
+
+    Two 4096-block groups.  Group 1's bitmaps and inode table live in group 0
+    (the FLEX_BG layout); `far.txt` is inode 65, i.e. local index 0 of group 1.
+    The *home* GDT deliberately points group 1 at block 0.  Only the committed
+    journal block holds the correct group descriptor.  After replay the engine
+    must reload the GDT before resolving inode 65; without that reload the file
+    is silently lost even though its name is in the root directory.
+    """
+    bs = 1024
+    inode_size = 256
+    incompat = INCOMPAT_FILETYPE | INCOMPAT_EXTENTS | INCOMPAT_FLEX_BG
+    img = Ext4Image(bs=bs, total_blocks=8192, inodes=128, inode_size=inode_size,
+                    incompat=incompat)
+
+    root_l0 = img.alloc(1)
+    jblk    = img.alloc(JOURNAL_BLOCKS)
+    payload = pattern("far", 900)
+    data_blk = img.alloc(1)
+    img.write_at(data_blk * bs, payload + b"\x00" * (bs - len(payload)))
+    # Group 1 metadata, deliberately packed into group 0 (FLEX_BG semantics).
+    bmap1 = img.alloc(1)
+    imap1 = img.alloc(1)
+    itab1 = img.alloc(32)
+
+    img.put_inode(65, inode_bytes(S_IFREG | 0o644, len(payload), 1, EXTENTS_FL,
+                                  extent_tree([(0, data_blk, 1, False)]),
+                                  bs // 512, inode_size=inode_size))
+    img.put_inode(8, inode_bytes(S_IFREG | 0o600, JOURNAL_BLOCKS * bs, 1,
+                                 EXTENTS_FL,
+                                 extent_tree([(0, jblk, JOURNAL_BLOCKS, False)]),
+                                 JOURNAL_BLOCKS * bs // 512,
+                                 inode_size=inode_size))
+    img.journal_inum = 8
+    img.write_block(root_l0, dirblock([(ROOT_INO, ".", FT_DIR),
+                                       (ROOT_INO, "..", FT_DIR),
+                                       (65, "far.txt", FT_REG)], bs))
+    img.put_inode(ROOT_INO, inode_bytes(S_IFDIR | 0o755, bs, 2, EXTENTS_FL,
+                                        extent_tree([(0, root_l0, 1, False)]),
+                                        bs // 512, inode_size=inode_size))
+    img.put_inode(1, inode_bytes(0, 0, 1, 0, b"", 0, inode_size=inode_size))
+
+    def patch(buf):
+        sb = 1024
+        struct.pack_into("<I", buf, sb + 0x20, 4096)   # blocks_per_group
+        struct.pack_into("<I", buf, sb + 0x28, 64)     # inodes_per_group
+        struct.pack_into("<I", buf, sb + 0x60, incompat)
+        buf[sb + 0x174] = 1                            # 2 groups per flex
+
+        gdt_off = img.gdt_block * bs
+        home = bytearray(buf[gdt_off:gdt_off + 64])
+        # group 1 descriptor in the home copy points at a block with no inode.
+        struct.pack_into("<I", home, 32 + 0x08, 0)
+        buf[gdt_off:gdt_off + 64] = home
+
+        logged = bytearray(home)
+        struct.pack_into("<I", logged, 0x00, img.bbitmap_block)
+        struct.pack_into("<I", logged, 0x04, img.ibitmap_block)
+        struct.pack_into("<I", logged, 0x08, img.itable_block)
+        struct.pack_into("<I", logged, 32 + 0x00, bmap1)
+        struct.pack_into("<I", logged, 32 + 0x04, imap1)
+        struct.pack_into("<I", logged, 32 + 0x08, itab1)
+
+        # Copy inode 65 into the relocated group-1 table (the table written by
+        # finish() is the home copy at block 5).
+        src = img.itable_block * bs + 64 * inode_size
+        dst = itab1 * bs
+        buf[dst:dst + inode_size] = buf[src:src + inode_size]
+        buf[imap1 * bs] |= 1                           # inode 65 is allocated
+
+        # The journal data block must be a FULL block: assigning a 64-byte
+        # descriptor into a 1024-byte slice would shrink the bytearray and
+        # shift everything after it.
+        logged_block = bytearray(bs)
+        logged_block[:64] = logged
+        for idx, blk in enumerate((jbd_super(bs, JOURNAL_BLOCKS, 1, 100, 1),
+                                   jbd_desc(bs, 100, [(img.gdt_block, 0)],
+                                            data_blocks=[bytes(logged_block)]),
+                                   bytes(logged_block),
+                                   jbd_commit(bs, 100))):
+            off = (jblk + idx) * bs
+            buf[off:off + bs] = blk
+
+    img.hooks.append(patch)
+
+    return img, {
+        "variant": "ext4-flex-bg-gdt",
+        "purpose": ("FLEX_BG: group 1 metadata sits in group 0; the committed "
+                    "journal carries the group descriptor that points at it"),
+        "partitionStartSector": 0,
+        "blockSize": bs,
+        "clusterRatio": 1,
+        "journal": {"start": 1, "appliedTransactions": 1, "overlayBlocks": 1,
+                    "csum": 0, "flexBg": True},
+        "absent": [],
+        "files": [manifest_entry("\\far.txt", "far.txt", len(payload),
+                                 payload, "normal")],
+    }
+
+
+def build_external_journal():
+    """s_journal_dev: the committed log lives on a separate raw image.
+
+    The volume superblock has s_journal_inum = 0 and a non-zero
+    s_journal_dev; the only way to recover `rescue.bin` is to hand the engine
+    the external journal image and have it match the 16-byte journal UUID.
+    """
+    bs = 1024
+    inode_size = 256
+    img = Ext4Image(bs=bs, total_blocks=8192, inode_size=inode_size,
+                    incompat=INCOMPAT_FILETYPE | INCOMPAT_EXTENTS)
+
+    root_l0 = img.alloc(1)
+    rescue = pattern("extjournal", 1500)
+    rb = img.alloc(2)
+    img.write_at(rb * bs, rescue + b"\x00" * (2 * bs - len(rescue)))
+    img.put_inode(15, inode_bytes(S_IFREG | 0o644, len(rescue), 1, EXTENTS_FL,
+                                  extent_tree([(0, rb, 2, False)]),
+                                  2 * bs // 512, inode_size=inode_size))
+    img.put_inode(ROOT_INO, inode_bytes(S_IFDIR | 0o755, bs, 2, EXTENTS_FL,
+                                        extent_tree([(0, root_l0, 1, False)]),
+                                        bs // 512, inode_size=inode_size))
+    img.put_inode(1, inode_bytes(0, 0, 1, 0, b"", 0, inode_size=inode_size))
+    img.write_block(root_l0, dirblock([(ROOT_INO, ".", FT_DIR),
+                                       (ROOT_INO, "..", FT_DIR)], bs))
+
+    def zero_home(buf):
+        off = img.itable_block * bs + 14 * inode_size
+        buf[off:off + inode_size] = b"\x00" * inode_size
+        sb = 1024
+        buf[sb + 0xD0:sb + 0xE0] = JBD_UUID
+        struct.pack_into("<I", buf, sb + 0xE0, 0)   # s_journal_inum
+        struct.pack_into("<I", buf, sb + 0xE4, 1)   # s_journal_dev
+
+    img.hooks.append(zero_home)
+
+    itbl_blk, itbl_img = itable_block_bytes(img, 15, img.inodes_data[15])
+    jimg = bytearray(bs * JOURNAL_BLOCKS)
+    records = (
+        jbd_super(bs, JOURNAL_BLOCKS, 1, 100, 1),
+        jbd_desc(bs, 100, [(itbl_blk, 0), (root_l0, 0)],
+                 data_blocks=[itbl_img,
+                              dirblock([(ROOT_INO, ".", FT_DIR),
+                                        (ROOT_INO, "..", FT_DIR),
+                                        (15, "rescue.bin", FT_REG)], bs)]),
+        itbl_img,
+        dirblock([(ROOT_INO, ".", FT_DIR), (ROOT_INO, "..", FT_DIR),
+                  (15, "rescue.bin", FT_REG)], bs),
+        jbd_commit(bs, 100),
+    )
+    for idx, data in enumerate(records):
+        jimg[idx * bs:(idx + 1) * bs] = data
+
+    return img, {
+        "variant": "ext4-journal-external",
+        "purpose": ("external journal device: s_journal_dev + matching UUID; "
+                    "replay requires an explicitly supplied journal image"),
+        "partitionStartSector": 0,
+        "blockSize": bs,
+        "clusterRatio": 1,
+        "journal": {"start": 1, "appliedTransactions": 1, "overlayBlocks": 2,
+                    "csum": 0, "external": True},
+        "absent": [],
+        "files": [manifest_entry("\\rescue.bin", "rescue.bin", len(rescue),
+                                 rescue, "normal")],
+        "externalJournalImage": bytes(jimg),
+    }
+
+
 VARIANTS = {
     "ext4-base": build_base,
     "ext4-uninit": build_uninit,
@@ -1046,10 +1278,14 @@ VARIANTS = {
     "ext4-inline": build_inline,
     "ext4-sparse": build_sparse_depth,
     "ext4-journal": lambda: build_journal(False),
+    "ext4-journal-v1": lambda: build_journal(False, v1=True),
     "ext4-journal-clean": lambda: build_journal(True),
+    "ext4-journal-torn": lambda: build_journal(False, torn=True),
     "ext4-journal-csum2": lambda: build_journal(False, csum=2),
     "ext4-journal-csum3": lambda: build_journal(False, csum=3),
     "ext4-journal-csum-bad": lambda: build_journal(False, csum=3, corrupt='commit'),
+    "ext4-flex-bg-gdt": build_flex_bg_gdt,
+    "ext4-journal-external": build_external_journal,
 }
 
 
@@ -1074,6 +1310,14 @@ def main():
             f.write(data)
         manifest["imageBytes"] = len(data)
         manifest["imageSha256"] = sha(data)
+        # Some variants need a second raw image (e.g. an external journal
+        # device).  Write it next to the volume and keep only its path in JSON.
+        aux = manifest.pop("externalJournalImage", None)
+        if aux is not None:
+            aux_path = os.path.join(args.out, name + ".journal.img")
+            with open(aux_path, "wb") as f:
+                f.write(aux)
+            manifest["externalJournalPath"] = name + ".journal.img"
         with open(os.path.join(args.out, name + ".json"), "w", encoding="utf-8") as f:
             json.dump(manifest, f, ensure_ascii=False, indent=1)
         print("%-16s %9d bytes  %s" % (name, len(data), path))

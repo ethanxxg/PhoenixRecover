@@ -42,6 +42,18 @@ uint64_t Ext4Parser::UnixToFiletime(uint32_t unixTime, uint32_t extraBits)
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// SetExternalJournalImage – supply the separate journal device explicitly
+// ─────────────────────────────────────────────────────────────────────────────
+bool Ext4Parser::SetExternalJournalImage(const std::wstring& imagePath)
+{
+    auto reader = std::make_unique<SectorReader>();
+    if (!reader->OpenImage(imagePath) || !reader->IsOpen()) return false;
+    m_externalJournal      = std::move(reader);
+    m_externalJournalReady = true;
+    return true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Open – read and validate superblock
 // ─────────────────────────────────────────────────────────────────────────────
 bool Ext4Parser::Open(SectorReader& reader, const Partition& partition)
@@ -135,7 +147,8 @@ bool Ext4Parser::Open(SectorReader& reader, const Partition& partition)
     // to its home location ("crash before checkpoint").  Replaying it is what
     // makes a file that looks deleted on disk come back with its name and
     // extent tree.  The overlay is memory-only; the scan source is untouched.
-    if (m_sb.s_journal_inum != 0 && ReplayJournal() && !m_overlay.empty())
+    if ((m_sb.s_journal_inum != 0 || m_sb.s_journal_dev != 0) &&
+        ReplayJournal() && !m_overlay.empty())
         ReloadGroupDescriptors();   // the GDT blocks may themselves be logged
 
     m_valid = true;
@@ -286,40 +299,71 @@ bool Ext4Parser::ReplayJournal()
     m_revoke.clear();
     m_journalCommits = 0;
 
-    const uint32_t jinum = m_sb.s_journal_inum;
-    if (jinum == 0) return false;
-
-    EXT4_INODE jinode{};
-    if (!ReadInode(jinum, jinode)) return false;
-    if ((jinode.i_mode & EXT4_S_IFMT) != EXT4_S_IFREG) return false;
+    // An external journal (s_journal_dev != 0) is a separate device.  It can
+    // only be replayed when the caller supplied that device explicitly; if
+    // both dev and inum are set, the external device wins (that is the
+    // on-disk meaning of a non-zero s_journal_dev).
+    const bool useExternal = (m_sb.s_journal_dev != 0 &&
+                              m_externalJournalReady && m_externalJournal != nullptr);
+    if (!useExternal && m_sb.s_journal_inum == 0) return false;
 
     std::vector<uint64_t> jmap;
-    if (!JournalBlockMap(jinode, jmap)) return false;
+    if (!useExternal) {
+        EXT4_INODE jinode{};
+        if (!ReadInode(m_sb.s_journal_inum, jinode)) return false;
+        if ((jinode.i_mode & EXT4_S_IFMT) != EXT4_S_IFREG) return false;
+        if (!JournalBlockMap(jinode, jmap)) return false;
+    }
+    const uint64_t jcapacity = useExternal
+        ? (m_externalJournal->GetTotalBytes() / m_blockSize)
+        : static_cast<uint64_t>(jmap.size());
+    auto readJb = [&](uint32_t index, void* out) -> bool {
+        if (useExternal)
+            return m_externalJournal->ReadBytes(
+                static_cast<uint64_t>(index) * m_blockSize, out, m_blockSize);
+        return ReadJournalAt(jmap, index, out);
+    };
 
     std::vector<uint8_t> buf(m_blockSize);
-    if (!ReadJournalAt(jmap, 0, buf.data())) return false;
+    if (!readJb(0, buf.data())) return false;
+
+    // Never replay a log from a different volume: the UUID is the only stable
+    // identity linking an external journal device to this filesystem.
+    if (useExternal &&
+        std::memcmp(buf.data() + JBD2_SB_UUID_OFF, m_sb.s_journal_uuid, 16) != 0) {
+        LOG_INFO(L"Ext4Parser: external journal UUID mismatch; refusing replay");
+        return false;
+    }
 
     if (Be32(buf.data()) != JBD2_MAGIC) return false;
-    // Only the v2 superblock is handled.  A v1 (very old ext3) journal uses a
-    // different block-tag layout — 8-byte tags whose trailing 16-byte UUID is
-    // present unless JBD2_FLAG_SAME_UUID is set — so parsing it with the v2
-    // rule would desync the whole log and overlay the wrong blocks.  Refusing
-    // is the safe direction: no replay is the pre-existing behaviour, whereas
+    // JBD (v1, very old ext3) and JBD2 (v2) share the superblock prefix but
+    // NOT the descriptor tag layout:
+    //   v1: 8-byte tag (be32 blocknr, be32 flags), followed by a 16-byte UUID
+    //       unless JBD_FLAG_SAME_UUID is set;
+    //   v2: 8-byte tag (be32 blocknr, be16 checksum, be16 flags), no inline
+    //       UUID (the UUID lives once in the journal superblock).
+    // Parsing v1 with the v2 rule desyncs the tag array and overlays the wrong
+    // blocks, so the two variants are dispatched explicitly below.  Anything
+    // else is still refused: no replay is the pre-existing behaviour, whereas
     // a wrong overlay is silent corruption.
-    if (Be32(buf.data() + 4) != JBD2_BLOCKTYPE_SB_V2) return false;
+    const uint32_t sbType = Be32(buf.data() + 4);
+    const bool isV1 = (sbType == JBD2_BLOCKTYPE_SB_V1);
+    if (!isV1 && sbType != JBD2_BLOCKTYPE_SB_V2) return false;
 
     const uint32_t jbs      = Be32(buf.data() + 0x0C);
     const uint32_t maxlen   = Be32(buf.data() + 0x10);
     const uint32_t first    = Be32(buf.data() + 0x14);
     uint32_t       seq      = Be32(buf.data() + 0x18);
     const uint32_t start    = Be32(buf.data() + 0x1C);
-    const uint32_t incompat = Be32(buf.data() + 0x28);
+    // The feature flags do not exist in a v1 superblock (that area is zero);
+    // treating them as 0 is both accurate and keeps the v2 path unchanged.
+    const uint32_t incompat = isV1 ? 0u : Be32(buf.data() + 0x28);
 
     if (jbs != m_blockSize) return false;
     // s_start == 0 means the log was checkpointed and the journal is empty:
     // there is nothing newer than the home locations, so replay is a no-op.
     if (start == 0) return false;
-    if (maxlen < 2 || maxlen > jmap.size()) return false;
+    if (maxlen < 2 || maxlen > jcapacity) return false;
     if (first == 0 || first >= maxlen) return false;
     if (start < first || start >= maxlen) return false;
 
@@ -335,7 +379,8 @@ bool Ext4Parser::ReplayJournal()
     // below 2^32, and silently mis-parsing a foreign 64-bit tag would build a
     // wrong overlay.  Refusing = no replay, the safe direction.
     uint32_t tagSize;
-    if (hasCsum3)      tagSize = 16u;
+    if (isV1)          tagSize = 8u;    // + 16-byte UUID unless SAME_UUID
+    else if (hasCsum3) tagSize = 16u;
     else if (has64)    tagSize = 12u;   // v2 + 64bit (handled conservatively below)
     else               tagSize = 8u;
     const uint32_t revSize = has64 ? 8u : 4u;
@@ -411,7 +456,7 @@ bool Ext4Parser::ReplayJournal()
     };
 
     for (uint32_t step = 0; step < stepCap; ++step) {
-        if (!ReadJournalAt(jmap, pos, buf.data())) break;
+        if (!readJb(pos, buf.data())) break;
         if (Be32(buf.data()) != JBD2_MAGIC) break;          // torn tail
 
         const uint32_t type = Be32(buf.data() + 4);
@@ -431,7 +476,15 @@ bool Ext4Parser::ReplayJournal()
             while (off + tagSize <= tagLimit) {
                 uint64_t bn = Be32(buf.data() + off);
                 uint16_t flags, csumV2 = 0;
-                if (hasCsum3) {
+                if (isV1) {
+                    // v1: t_flags is be32; a 16-byte UUID follows every tag
+                    // unless the writer set SAME_UUID (subsequent tags reuse
+                    // the UUID written by the first tag of this descriptor).
+                    flags = static_cast<uint16_t>(Be32(buf.data() + off + 4));
+                    if (!(flags & JBD2_FLAG_SAME_UUID)) {
+                        if (off + 8 + 16 > tagLimit) break;
+                    }
+                } else if (hasCsum3) {
                     flags = static_cast<uint16_t>(Be32(buf.data() + off + 4));
                 } else {
                     csumV2 = Be16(buf.data() + off + 4);        // t_checksum (v2, low16)
@@ -439,6 +492,7 @@ bool Ext4Parser::ReplayJournal()
                 }
                 tags.emplace_back(Tag{bn, flags, csumV2, off});
                 off += tagSize;
+                if (isV1 && !(flags & JBD2_FLAG_SAME_UUID)) off += 16;
                 if (flags & JBD2_FLAG_LAST_TAG) break;
             }
             if (tags.empty()) break;
@@ -456,7 +510,7 @@ bool Ext4Parser::ReplayJournal()
                 if (hasCsum && !(t.flags & JBD2_FLAG_DELETED)) {
                     if (dataIdx >= jmap.size() || jmap[dataIdx] == 0) continue;
                     std::vector<uint8_t> dblock(m_blockSize);
-                    if (!ReadJournalAt(jmap, dataIdx, dblock.data())) continue;
+                    if (!readJb(dataIdx, dblock.data())) continue;
                     if (!tagOk(buf.data() + t.off, cur,
                                dblock.data(), t.csumV2)) {
                         LOG_INFO(L"Ext4Parser JBD2 tag checksum mismatch for block "
@@ -541,7 +595,7 @@ bool Ext4Parser::ReplayJournal()
             if (bytes + m_blockSize > kMaxOverlayBytes) break;
 
             std::vector<uint8_t> data(m_blockSize);
-            if (!ReadJournalAt(jmap, it.jidx, data.data())) continue;
+            if (!readJb(it.jidx, data.data())) continue;
             if (it.escape) {   // writer zeroed a leading magic, restore it
                 data[0] = static_cast<uint8_t>(JBD2_MAGIC >> 24);
                 data[1] = static_cast<uint8_t>(JBD2_MAGIC >> 16);
@@ -558,7 +612,7 @@ bool Ext4Parser::ReplayJournal()
     m_overlay.swap(overlay);
 
     if (!m_overlay.empty()) {
-        LOG_INFO(L"Ext4Parser: JBD2 replay applied "
+        LOG_INFO(std::wstring(L"Ext4Parser: ") + (isV1 ? L"JBD" : L"JBD2") + L" replay applied "
                  + std::to_wstring(m_journalCommits) + L" transaction(s), "
                  + std::to_wstring(m_overlay.size()) + L" block(s) overlaid, "
                  + std::to_wstring(m_revoke.size()) + L" revoke record(s)");
