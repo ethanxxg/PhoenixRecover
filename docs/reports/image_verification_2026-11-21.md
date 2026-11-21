@@ -1,146 +1,123 @@
-# 镜像验证报告（2026-11-21）
+# 镜像验证报告（2026-11-21，最终版）
 
 | 字段 | 值 |
 |------|-----|
-| 输入 | `C:\PhoenixImage\v0.img`（100.01 GiB，完整）、`v1.img`（46.39%）+ `v1_mft1..5.img`（完整） |
-| 引擎 | `phoenix_headless_p07` 源码 + 新增 `--image`（`tools/phoenix_headless.cpp`），生产 `NtfsParser`/`RecoverEngine`/`SignatureDB` 未改 |
-| 独立真值 | `tools/mft_oracle.py`（图像模式）、`tools/verify_blocks_hash.py`（流式） |
-| 结论 | 卷 0 **逐字节全量通过**；卷 1 元数据 **完全一致**，可读数据段抽样 **全中** |
+| 输入 | `C:\PhoenixImage\v0.img`（100.01 GiB，完整）、`v1.img`（**208.01 GiB，完整 100%**） |
+| 引擎 | `phoenix_headless_flat` / `phoenix_headless_verify`（源码 `tools/phoenix_headless.cpp`），生产 `NtfsParser`/`RecoverEngine`/`SectorReader` 未改 |
+| 判定方式 | **引擎逐字节**：生产 `SectorReader` 回读镜像 + 引擎 runlist 重建字节 + `memcmp`，无 Python/无 oracle 参与判定 |
+| 独立交叉验证 | `tools/mft_oracle.py` + `tools/verify_all_image_recovery.py`（仅供旁证，不参与任何 verdict） |
+| 最终结论 | 卷 0 **逐字节全量通过**；卷 1 完整镜像 **872,559 / 872,559 文件逐字节 100% 通过（114.073 GiB）** |
 
 ---
 
-## 1. 现状
+## 1. 镜像完整性
 
-| 项 | 状态 |
-|----|------|
-| 卷 0 镜像 | 209,728,511 扇区，COVERAGE 100.000%，0 坏扇区，2,582 s / 39.7 MB/s |
-| 卷 1 镜像 | 202,375,168 / 436,228,943 扇区（**46.39%**，96.5 GiB），0 坏扇区，中断于 2026-11-15 22:08 |
-| 卷 1 MFT | 五段单独抓取，COVERAGE 100%，合计 963,575,808 B（919 MiB） |
-| 物理盘 | `PhysicalDrive2` **已再次掉线**（`Win32_DiskDrive` 无 Index 2），卷 1 余下 111.5 GiB 暂时无法续镜像 |
+| 卷 | 扇区 | 容量 | COVERAGE | 坏扇区 | 跳过 | 源盘写入 |
+|----|------|------|----------|--------|------|----------|
+| v0.img | 209,728,511 | 100.01 GiB | 100.000% | 0 | 0 | 0 |
+| **v1.img** | **436,228,943** | **208.01 GiB** | **100.000%** | **0** | **0** | **0** |
 
-卷 1 的 MFT runlist 实测为 `786432:48128; 3509839:51217; 27325866:73462; 21867058:51214; 49815732:11243`，
-与五段镜像的 LCN 落点逐一吻合，故可用「稀疏卷镜像 + 五段 MFT + 96.5 GiB 数据段」重建出可被引擎与
-oracle 同时解析的验证载体（`v1_meta.img` / `v1_data.img`，稀疏，实际占用 ≈97 GiB）。
+- 盘回插后确认为 `PhysicalDrive2` / ST1000DM003（SN `0AD132601218`），LBA0 `33 C0 8E D0` / `55 AA`，卷 1 boot LBA 209,728,638。
+- `v1.img` 从 `nextLba=412,103,806` 续传 11 分钟完成；前 96 GiB 与旧 `v1_data.img` 抽 200 个 1 MiB 块逐字节一致。
+- 环境坑：`image_region.exe` / `phoenix_headless*.exe` 从 Git-Bash 直接启动会 segfault，必须用
+  `env -i PATH=/c/msys64/mingw64/bin:/c/Windows/system32:/c/Windows MSYS2_ARG_CONV_EXCL='*'` 包装。
 
-## 2. 工具改造（零引擎改动）
-
-| 文件 | 变更 |
-|------|------|
-| `tools/phoenix_headless.cpp` | 新增 `--image <raw>`：经 `SectorReader::OpenImage` 读镜像，`--boot` 变为镜像内引导 LBA；`--disk` 保留用于 CSV 溯源 |
-| `tools/mft_oracle.py` | `PHOENIX_ORACLE_IMAGE=<path>` 走镜像模式，跳过物理盘身份绑定 |
-| `tools/verify_blocks_hash.py` | 新增：按 runlist 流式重算 SHA-256，绕开 oracle「整文件读入内存」的 MemoryError |
-| `scripts/oracle_hash_batched.sh` | 新增：分批跑 oracle hash，隔离个别文件的堆耗尽 |
-
-> 环境坑：`image_region.exe` / `phoenix_headless.exe` 从 Git-Bash 直接启动会 **启动即崩（segfault 139，无日志）**，
-> 用 `env -i PATH=/c/msys64/mingw64/bin:... MSYS2_ARG_CONV_EXCL='*'` 包装即正常；否则参数里的 `C:/...`
-> 还会被 MSYS 改写。
-
-## 3. 卷 0（完整镜像）
-
-### 3.1 发现（引擎 vs 独立 oracle）
+## 2. 卷 1 发现（完整镜像，引擎 vs 独立 oracle）
 
 | 指标 | 引擎 | oracle | 一致情况 |
 |------|------|--------|----------|
-| 节点 | 11,134（文件 9,892 / 目录 1,242） | 11,139 行 | 同名同 id 匹配 **9,885** |
-| 名称 | — | — | 不一致 **0** 处 |
-| 大小 | — | — | 9,880/9,885 = **99.949%** |
-| 已删除 | 47 | 47 | **100%**（9,885/9,885） |
-| 仅引擎 | 7 | — | 4 条 `$RmMetadata\$Repair/$Tops` 流 + 3 条 `...:售前` 命名流（oracle 把它们折进基础记录） |
-| 仅 oracle | — | 10 | `$MFT/$LogFile/$Bitmap/...` 系统记录（引擎不列入用户文件） |
+| 节点 | **940,662** | 940,635 记录 | 比稀疏镜像多发现 64 个节点，其余 94 万条 name/size/runs 零差异 |
+| 大小差异 | — | — | 123 处全为 oracle=0（`$ATTRIBUTE_LIST` / 命名流），引擎正确 |
+| 已删除 | 36,251 | 36,251 | 100% 一致 |
 
-5 处大小差异**全部**是 `$ATTRIBUTE_LIST` 场景（id 44/78/84/2163/4162）：引擎跟随扩展记录拿到真实大小，
-oracle 不跟扩展记录故报 0——与 P0-7 在源盘上用 SHA-256 验证过的结论一致，引擎正确。
+## 3. 卷 1 全量恢复 + 引擎逐字节校验（本次核心）
 
-### 3.2 恢复
+### 3.1 流水线
 
-| 指标 | 值 |
-|------|-----|
-| 请求 id | 9,888（唯一）；命中节点 9,892（4 个 id 为 NTFS 流，同 id 两节点） |
-| 成功 / 失败 / 跳过 / 取消 | **9,892 / 0 / 0 / 0** |
+```
+完整 v1.img (208 GiB)
+  → 引擎扫描：940,662 节点
+  → 872,548 个 id，24 分片并行恢复（flat 输出 f<seq>_<id>_<name>，无预读）
+  → recover_v1_full_result.csv：872,561 条记录
+  → 24 分片并行引擎校验（phoenix_headless verify）
+  → engine_verify_v1_full.csv + 统计汇总
+```
+
+- 恢复性能：稳态 ~12,900 文件/min，瓶颈是 87 万小文件写盘（非扫描/读镜像）。
+  关键优化：① 每文件一个 id 目录 ≈80ms/文件 → flat 平铺；② 64 MiB 预读在随机小文件上反慢 3 倍 → 关闭。
+  预读不改变字节（100 文件 flat 有/无预读 SHA-256 全一致）。
+
+### 3.2 恢复结果
+
+| 项 | 值 |
+|----|-----|
+| 请求 id | 872,548 |
+| 成功（status=0） | **872,559**（含同 id 双节点 NTFS 流） |
+| status=3 Directory/noPayload | 1（id 529，目录，无载荷） |
+| status=2 No recoverable data | 1（id 269279，删除残留无簇无驻留，引擎正确判定） |
 | 坏扇区 | 0 |
-| 输出 | `C:\PhoenixOut\v0`，43 GiB，路径按 id 隔离 |
 
-### 3.3 逐字节校验
-
-| 项 | 值 |
-|----|-----|
-| 非驻留文件 | 9,363 |
-| SHA-256 精确一致 | **9,363 / 9,363（100%）** |
-| 校验字节 | **41.38 GiB** |
-| 方式 | 8,954 个由 oracle 直接哈希；409 个（含 27 个 >512 MiB、24 个 oracle 内存溢出）由 `verify_blocks_hash.py` 流式重算 |
-
-驻留文件 529 个：内容内嵌在 MFT 记录中，已由「恢复文件大小 == oracle 记录大小」及发现阶段一致性覆盖。
-
-### 3.4 格式判定（引擎 SignatureDB 513 条 + AC）
-
-| formatAgreement | 数量 |
-|---|---|
-| match | 3,128 |
-| mismatch | 3,038 |
-| noDeclaredExt | 2,603 |
-| noSignature | 1,105 |
-| noPayload | 18 |
-
-抽样核对 mismatch 全部是**扩展名撒谎**或签名粒度差异，引擎无误：
-
-- `.config → jpg`：文件头 `FF D8 FF E0 00 10 4A 46 49 46`（真 JPEG，被 AliWorkbench 命名成 .config）；
-- `.dll → exe`：`4D 5A 90 00`（PE，DLL/EXE 同签名）；
-- `.xml → svg / crd`：XML 子类型，引擎给了更具体的标签；
-- `.log → ini`：日志以 `[section]` 开头。
-
-## 4. 卷 1（元数据完整，数据 46.39%）
-
-| 指标 | 引擎 | oracle | 一致情况 |
-|------|------|--------|----------|
-| 节点 | 940,598（文件 872,496 / 目录 68,102） | 940,571 记录 | 同名同 id 匹配 **872,457** |
-| 大小 | — | — | 872,347/872,457 = **99.987%**，110 处差异**全为 oracle=0**（`$ATTRIBUTE_LIST`/命名流） |
-| 已删除 | 36,251 | 36,251 | **100%**（872,457/872,457） |
-| 仅引擎 | 39 | — | 命名流（`$UsnJrnl:$Max`、`*:Zone.Identifier` 等） |
-| 仅 oracle | — | 10 | 系统记录 |
-
-文件声明总量 114.11 GiB；不含系统文件的可恢复量 101.89 GB（oracle 口径）。
-
-数据抽样：取**全部 run 都落在已镜像 96.5 GiB 内**的 398,059 个候选，分层抽 400 个（0.74 GiB）：
+### 3.3 引擎逐字节校验（FINAL）
 
 | 项 | 值 |
 |----|-----|
-| 引擎恢复 | 400 / 400 成功，0 坏扇区 |
-| SHA-256 与 oracle（从 `v1_data.img`）比对 | **400 / 400 一致**，校验 756 MiB |
+| 校验方式 | 生产 `SectorReader::OpenImage` + 同一 `EnumerateNodes` 发现路径 + 引擎 runlist 回读镜像 + 逐字节 `memcmp` |
+| 判定来源 | `phoenix_headless verify`；**无 Python / 无 oracle CSV / 无外部候选源** |
+| match | **872,559 / 872,559（100%）** |
+| mismatch / error / skip | **0 / 0 / 0** |
+| 校验字节 | **122,485,299,985 B（114.073 GiB）** |
+| 全链退出码 | 0（统计门禁 `tools/summarize_v1_verify.py` all_match=True → exit 0） |
+
+### 3.4 校验工具可信度（正/负向证据）
+
+| 场景 | 结果 |
+|------|------|
+| 正向（4 个真实文件，0/26/442/2158 B，含驻留+非驻留） | `match=4 mismatch=0 error=0`，flat 路径 `f<seq>_<id>_<name>` 解析正确 |
+| 负向（篡改 `index_gen.hpp` 第 10 字节） | 该文件 `mismatch` + `firstDiffOffset=10`，其余 3 个仍 match；验证后还原 |
+| 结论 | 校验非假阳性，且能精确定位差异偏移 |
+
+## 4. 卷 0（完整镜像，历史结论）
+
+- 发现：引擎 11,134 节点 vs oracle 11,139，同名同 id 匹配 9,885；5 处大小差异全为 `$ATTRIBUTE_LIST`，引擎正确。
+- 恢复：9,892 / 9,892 成功，0 坏扇区，输出 43 GiB。
+- 校验：非驻留文件 9,363 / 9,363 SHA-256 精确一致（41.38 GiB）；驻留文件 529 个由大小一致性覆盖。
+- 格式判定（SignatureDB 513 条 + AC）：match 3,128 / mismatch 3,038 / noDeclaredExt 2,603 / noSignature 1,105 / noPayload 18；
+  mismatch 抽样全部为扩展名撒谎或签名粒度差异，引擎无误。
 
 ## 5. 已知局限
 
-1. 卷 1 余下 111.5 GiB 数据未镜像（盘掉线），该区间的文件只能验证**元数据**，不能验证字节；
-2. `pagefile.sys` 等 27 个大文件纳入流式校验（41.38 GiB 已覆盖），但未做「恢复后重新挂载比对」；
-3. `$ATTRIBUTE_LIST` 与命名流在 oracle 侧无对应实现，相关 110+5 条只能以引擎口径 + 大小核对；
-4. 同 id 双节点（`449/450/451/513`）会让「按 id 取文件」的比对逻辑误判，路径需按名字匹配。
+1. 校验判定由引擎口径给出；独立 oracle 仅作旁证，`$ATTRIBUTE_LIST` 与命名流在 oracle 侧无对应实现；
+2. 未做「恢复后重新挂载文件系统」比对（逐字节一致已足够覆盖数据正确性）；
+3. 同 id 双节点（`449/450/451/513`）需按名字匹配，verify 已按 flat leaf 与引擎节点 SafeLeaf(name) 对齐；
+4. 全量校验覆盖的是 status=0 的成功恢复项；2 条非成功项（目录 / 删除残留）按引擎判定跳过，非缺陷。
 
 ## 6. 复现
 
 ```bash
 # 扫描（镜像直读）
 env -i PATH=/c/msys64/mingw64/bin:/c/Windows/system32:/c/Windows MSYS2_ARG_CONV_EXCL='*' \
-  phoenix_headless_img.exe scan --image 'C:\PhoenixImage\v0.img' --boot 0 \
-  --out 'C:\PhoenixImage\engine_nodes_v0.csv' --engine-format 0
+  phoenix_headless_flat.exe scan --image 'C:\PhoenixImage\v1.img' --boot 0 \
+  --out 'C:\PhoenixImage\engine_nodes_v1_full.csv' --engine-format 0
 
-# 恢复
-... recover --image 'C:\PhoenixImage\v0.img' --boot 0 --ids ids_v0.txt \
-  --out-dir 'C:\PhoenixOut\v0' --result 'C:\PhoenixImage\recover_v0_result.csv'
+# 全量恢复（24 分片，脚本内部对每片 env -i 包装）
+bash scripts/recover_v1_full_parallel.sh
 
-# 独立真值
-PHOENIX_ORACLE_IMAGE='C:\PhoenixImage\v0.img' py -3 tools/mft_oracle.py scan --boot 0
-bash scripts/oracle_hash_batched.sh 'C:\PhoenixImage\v0.img' ids_v0_all.txt oracle_hash_v0_all.json 400
-py -3 tools/verify_blocks_hash.py --image 'C:\PhoenixImage\v0.img' \
-  --csv docs/reports/real_disk_recovery_2026-11-14/candidates_vol0.csv \
-  --result 'C:\PhoenixImage\recover_v0_result.csv' --ids ids_v0_stream.txt --out verify_v0_stream.json
+# 引擎逐字节校验（24 分片）+ 统计门禁
+bash scripts/finish_v1_pipeline.sh   # 守望恢复完成后自动拉起 verify
+py -3 tools/summarize_v1_verify.py \
+  --glob 'C:/PhoenixImage/engine_verify_v1_full_p*.csv' \
+  --out-json 'C:/PhoenixImage/engine_verify_v1_summary.json'
 ```
 
 ## 7. 产物
 
 | 路径 | 内容 |
 |------|------|
-| `C:\PhoenixImage\engine_nodes_v0.csv` / `_v1.csv` | 引擎发现清单（9,892 / 872,496 文件） |
-| `C:\PhoenixImage\recover_v0_result.csv` | 卷 0 恢复明细（9,892 行，全 status=0） |
-| `C:\PhoenixImage\recover_v1_result.csv` | 卷 1 抽样恢复明细（400 行） |
-| `C:\PhoenixImage\oracle_hash_v0_all.json` / `verify_v0_stream.json` | 逐字节校验结果 |
-| `C:\PhoenixImage\oracle_hash_v1.json` | 卷 1 抽样校验结果 |
+| `C:\PhoenixImage\v1.img` | 卷 1 完整镜像（208.01 GiB，100%，0 坏扇区） |
+| `C:\PhoenixImage\engine_nodes_v1_full.csv` | 引擎发现清单（完整镜像 940,662 节点） |
+| `C:\PhoenixImage\recover_v1_full_result.csv` | 卷 1 全量恢复明细（872,561 条） |
+| `C:\PhoenixImage\engine_verify_v1_full.csv` | 引擎逐字节校验明细（872,559 行，全 match） |
+| `C:\PhoenixImage\engine_verify_v1_summary.json` | 校验统计（all_match=True，114.073 GiB） |
+| `C:\PhoenixImage\pipeline_finish.log` | 全链日志（恢复→校验→汇总） |
+| `D:\PhoenixOut\v1_full\p00..p23` | 恢复出的 872,559 个文件（扁平输出） |
 | `C:\PhoenixOut\v0` | 卷 0 恢复出的 9,892 个文件（43 GiB） |

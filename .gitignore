@@ -52,3 +52,5 @@ docs/reports/real_disk_recovery_2026-11-14/batches/*.json
 *.rej
 *.bak_p09
 crash_reports/
+__pycache__/
+*.pyc
