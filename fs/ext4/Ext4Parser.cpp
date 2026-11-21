@@ -41,6 +41,9 @@ bool Ext4Parser::Open(SectorReader& reader, const Partition& partition)
     m_nextId = 1;
     m_totalInodes = 0;
     m_inUseCount  = 0;
+    m_overlay.clear();
+    m_revoke.clear();
+    m_journalCommits = 0;
     m_partStartByte = partition.startSector * reader.GetSectorSize();
 
     // Superblock is at byte offset 1024 from the start of the partition
@@ -107,22 +110,18 @@ bool Ext4Parser::Open(SectorReader& reader, const Partition& partition)
 
     // Read group descriptors
     // Group descriptors start at block 0 or 1 (depending on block size)
-    uint64_t gdtBlock = (m_blockSize == 1024) ? 2 : 1;
-    uint64_t gdtBytes = static_cast<uint64_t>(m_groupCount) * m_descSize;
-    uint32_t gdtBlocks = static_cast<uint32_t>(
-        (gdtBytes + m_blockSize - 1) / m_blockSize);
-
-    std::vector<uint8_t> gdtBuf(static_cast<size_t>(gdtBlocks) * m_blockSize);
-    if (!ReadBlocks(gdtBlock, gdtBlocks, gdtBuf.data())) {
+    if (!ReloadGroupDescriptors()) {
         LOG_ERROR(L"Ext4Parser: cannot read group descriptors");
         return false;
     }
 
-    m_groupDescs.resize(m_groupCount);
-    for (uint32_t g = 0; g < m_groupCount; ++g) {
-        const uint8_t* p = gdtBuf.data() + g * m_descSize;
-        memcpy(&m_groupDescs[g], p, std::min((size_t)m_descSize, sizeof(EXT4_GROUP_DESC)));
-    }
+    // ── JBD2 replay ───────────────────────────────────────────────────────
+    // Metadata that the kernel committed to the journal but never wrote back
+    // to its home location ("crash before checkpoint").  Replaying it is what
+    // makes a file that looks deleted on disk come back with its name and
+    // extent tree.  The overlay is memory-only; the scan source is untouched.
+    if (m_sb.s_journal_inum != 0 && ReplayJournal() && !m_overlay.empty())
+        ReloadGroupDescriptors();   // the GDT blocks may themselves be logged
 
     m_valid = true;
     LOG_INFO(L"Ext4Parser::Open ok"
@@ -130,7 +129,69 @@ bool Ext4Parser::Open(SectorReader& reader, const Partition& partition)
              L"  inodeSize="   + std::to_wstring(m_inodeSize) +
              L"  groups="      + std::to_wstring(m_groupCount) +
              L"  extents="     + (m_hasExtents ? L"yes" : L"no") +
-             L"  64bit="       + (m_is64Bit ? L"yes" : L"no"));
+             L"  64bit="       + (m_is64Bit ? L"yes" : L"no") +
+             L"  jnlCommits="  + std::to_wstring(m_journalCommits) +
+             L"  jnlBlocks="   + std::to_wstring(m_overlay.size()));
+    return true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ReloadGroupDescriptors – (re)read the group descriptor table
+// Called once during Open() and again after journal replay, because a logged
+// group descriptor can move the inode table or change its free counts.
+// ─────────────────────────────────────────────────────────────────────────────
+bool Ext4Parser::ReloadGroupDescriptors()
+{
+    const uint64_t gdtBlock = (m_blockSize == 1024) ? 2 : 1;
+    const uint64_t gdtBytes = static_cast<uint64_t>(m_groupCount) * m_descSize;
+    const uint32_t gdtBlocks = static_cast<uint32_t>(
+        (gdtBytes + m_blockSize - 1) / m_blockSize);
+
+    std::vector<uint8_t> gdtBuf(static_cast<size_t>(gdtBlocks) * m_blockSize);
+    if (!ReadBlocks(gdtBlock, gdtBlocks, gdtBuf.data()))
+        return false;
+
+    m_groupDescs.assign(m_groupCount, EXT4_GROUP_DESC{});
+    for (uint32_t g = 0; g < m_groupCount; ++g) {
+        const uint8_t* p = gdtBuf.data() + g * m_descSize;
+        memcpy(&m_groupDescs[g], p, std::min((size_t)m_descSize, sizeof(EXT4_GROUP_DESC)));
+    }
+    return true;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ReadFsBytes – the single choke point for metadata reads.
+//
+// ReadBlock/ReadBlocks/ReadInode/ReadInodeRaw all come through here, so the
+// journal overlay is honoured everywhere (ReadInode addresses the inode table
+// arithmetically and never called ReadBlock).  A range may straddle blocks, so
+// the copy walks block by block and only falls back to the device for blocks
+// the journal did not override.
+// ─────────────────────────────────────────────────────────────────────────────
+bool Ext4Parser::ReadFsBytes(uint64_t byteOffset, void* buffer, uint32_t len)
+{
+    if (m_overlay.empty())
+        return m_reader->ReadBytes(m_partStartByte + byteOffset, buffer, len);
+
+    uint8_t* dst   = static_cast<uint8_t*>(buffer);
+    uint64_t pos   = byteOffset;
+    uint32_t left  = len;
+
+    while (left > 0) {
+        const uint64_t blk   = pos / m_blockSize;
+        const uint32_t inBlk = static_cast<uint32_t>(pos % m_blockSize);
+        const uint32_t chunk = std::min<uint32_t>(left, m_blockSize - inBlk);
+
+        auto it = m_overlay.find(blk);
+        if (it != m_overlay.end()) {
+            memcpy(dst, it->second.data() + inBlk, chunk);
+        } else if (!m_reader->ReadBytes(m_partStartByte + pos, dst, chunk)) {
+            return false;
+        }
+        dst  += chunk;
+        pos  += chunk;
+        left -= chunk;
+    }
     return true;
 }
 
@@ -139,14 +200,245 @@ bool Ext4Parser::Open(SectorReader& reader, const Partition& partition)
 // ─────────────────────────────────────────────────────────────────────────────
 bool Ext4Parser::ReadBlock(uint64_t blockNum, void* buffer)
 {
-    uint64_t offset = m_partStartByte + blockNum * m_blockSize;
-    return m_reader->ReadBytes(offset, buffer, m_blockSize);
+    return ReadFsBytes(blockNum * m_blockSize, buffer, m_blockSize);
 }
 
 bool Ext4Parser::ReadBlocks(uint64_t startBlock, uint32_t count, void* buffer)
 {
-    uint64_t offset = m_partStartByte + startBlock * m_blockSize;
-    return m_reader->ReadBytes(offset, buffer, count * m_blockSize);
+    return ReadFsBytes(startBlock * m_blockSize, buffer, count * m_blockSize);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// JournalBlockMap – journal logical block index -> absolute filesystem block
+//
+// The journal is an ordinary regular file (s_journal_inum, usually inode 8) so
+// its own mapping is read like any other file.  Holes are kept as 0 and are
+// rejected by ReadJournalAt, never silently mapped to block 0.
+// ─────────────────────────────────────────────────────────────────────────────
+bool Ext4Parser::JournalBlockMap(const EXT4_INODE& jinode, std::vector<uint64_t>& map)
+{
+    map.clear();
+
+    std::vector<std::pair<uint64_t, uint32_t>> runs;
+    if (jinode.i_flags & EXT4_EXTENTS_FL) runs = GetExtentBlocks(jinode);
+    else                                  runs = GetIndirectBlocks(jinode);
+    if (runs.empty()) return false;
+
+    const uint64_t jsize = static_cast<uint64_t>(jinode.i_size_lo)
+                         | (static_cast<uint64_t>(jinode.i_size_hi) << 32);
+    const uint64_t jblocks = (jsize + m_blockSize - 1) / m_blockSize;
+    if (jblocks < 2) return false;
+    // 4M blocks = 4 GiB of log at 1 KiB blocks; anything larger is corruption.
+    if (jblocks > (1ull << 22)) return false;
+
+    map.reserve(static_cast<size_t>(jblocks));
+    for (const auto& r : runs) {
+        for (uint32_t i = 0; i < r.second && map.size() < jblocks; ++i)
+            map.push_back(r.first ? (r.first + i) : 0);
+        if (map.size() >= jblocks) break;
+    }
+    return !map.empty() && map[0] != 0;
+}
+
+bool Ext4Parser::ReadJournalAt(const std::vector<uint64_t>& map, uint32_t index, void* out)
+{
+    if (index >= map.size()) return false;
+    const uint64_t blk = map[index];
+    if (blk == 0) return false;
+    // Replay runs while m_overlay is still empty, so this is the raw device.
+    return ReadBlock(blk, out);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ReplayJournal – build the read-only overlay from the JBD2 log
+//
+// Two phases, mirroring jbd2_journal_recover():
+//   1. Walk the whole log once, collecting committed transactions (descriptor
+//      tag + data-block position) and every revoke record.  A revoke may be
+//      logged AFTER the descriptor it cancels, so replaying as we walk would
+//      get the order wrong — hence the separate collection phase.
+//   2. Apply the collected transactions in log order, skipping any copy that a
+//      revoke suppresses (t_seq <= revoke_seq), keeping the last copy of a
+//      block that was logged twice.
+//
+// Only committed transactions reach the overlay: a torn tail (bad magic, a
+// missing commit block, an out-of-sequence header) simply ends the walk, which
+// is exactly what the kernel does after a crash.
+// ─────────────────────────────────────────────────────────────────────────────
+bool Ext4Parser::ReplayJournal()
+{
+    m_overlay.clear();
+    m_revoke.clear();
+    m_journalCommits = 0;
+
+    const uint32_t jinum = m_sb.s_journal_inum;
+    if (jinum == 0) return false;
+
+    EXT4_INODE jinode{};
+    if (!ReadInode(jinum, jinode)) return false;
+    if ((jinode.i_mode & EXT4_S_IFMT) != EXT4_S_IFREG) return false;
+
+    std::vector<uint64_t> jmap;
+    if (!JournalBlockMap(jinode, jmap)) return false;
+
+    std::vector<uint8_t> buf(m_blockSize);
+    if (!ReadJournalAt(jmap, 0, buf.data())) return false;
+
+    if (Be32(buf.data()) != JBD2_MAGIC) return false;
+    // Only the v2 superblock is handled.  A v1 (very old ext3) journal uses a
+    // different block-tag layout — 8-byte tags whose trailing 16-byte UUID is
+    // present unless JBD2_FLAG_SAME_UUID is set — so parsing it with the v2
+    // rule would desync the whole log and overlay the wrong blocks.  Refusing
+    // is the safe direction: no replay is the pre-existing behaviour, whereas
+    // a wrong overlay is silent corruption.
+    if (Be32(buf.data() + 4) != JBD2_BLOCKTYPE_SB_V2) return false;
+
+    const uint32_t jbs      = Be32(buf.data() + 0x0C);
+    const uint32_t maxlen   = Be32(buf.data() + 0x10);
+    const uint32_t first    = Be32(buf.data() + 0x14);
+    uint32_t       seq      = Be32(buf.data() + 0x18);
+    const uint32_t start    = Be32(buf.data() + 0x1C);
+    const uint32_t incompat = Be32(buf.data() + 0x28);
+
+    if (jbs != m_blockSize) return false;
+    // s_start == 0 means the log was checkpointed and the journal is empty:
+    // there is nothing newer than the home locations, so replay is a no-op.
+    if (start == 0) return false;
+    if (maxlen < 2 || maxlen > jmap.size()) return false;
+    if (first == 0 || first >= maxlen) return false;
+    if (start < first || start >= maxlen) return false;
+
+    const bool     has64   = (incompat & JBD2_FEATURE_INCOMPAT_64BIT) != 0;
+    const uint32_t tagSize = has64 ? 12u : 8u;   // journal_block_tag_s
+    const uint32_t revSize = has64 ? 8u : 4u;
+
+    struct Item { uint64_t block; uint32_t jidx; bool escape; };
+    struct Txn  { uint32_t seq; std::vector<Item> items; };
+
+    std::vector<Txn> transaction;
+    std::vector<Item> pending;
+    uint32_t cur = seq;
+    uint32_t pos = start;
+    const uint32_t stepCap = maxlen * 2 + 8;   // guards against log wraparound
+
+    auto advance = [&](uint32_t i) -> uint32_t {
+        return (i + 1 >= maxlen) ? first : i + 1;
+    };
+
+    for (uint32_t step = 0; step < stepCap; ++step) {
+        if (!ReadJournalAt(jmap, pos, buf.data())) break;
+        if (Be32(buf.data()) != JBD2_MAGIC) break;          // torn tail
+
+        const uint32_t type = Be32(buf.data() + 4);
+
+        if (type == JBD2_BLOCKTYPE_DESCRIPTOR) {
+            if (Be32(buf.data() + 8) != cur) break;         // out of sequence
+
+            // Collect the tag array first: the data blocks follow the whole
+            // descriptor block, in tag order.
+            std::vector<std::pair<uint64_t, uint16_t>> tags;
+            size_t off = 12;
+            while (off + tagSize <= m_blockSize) {
+                uint64_t bn = Be32(buf.data() + off);
+                const uint16_t flags = Be16(buf.data() + off + 6);
+                if (has64)
+                    bn |= static_cast<uint64_t>(Be32(buf.data() + off + 8)) << 32;
+                tags.emplace_back(bn, flags);
+                off += tagSize;
+                if (flags & JBD2_FLAG_LAST_TAG) break;
+            }
+            if (tags.empty()) break;
+
+            for (const auto& t : tags) {
+                uint32_t dataIdx = pos;
+                if (!(t.second & JBD2_FLAG_DELETED)) {
+                    dataIdx = advance(pos);     // consumed even if later revoked
+                    pos     = dataIdx;
+                }
+                if (t.first == 0) continue;
+                pending.push_back(Item{t.first, dataIdx,
+                                       (t.second & JBD2_FLAG_ESCAPE) != 0});
+            }
+        } else if (type == JBD2_BLOCKTYPE_COMMIT) {
+            if (Be32(buf.data() + 8) != cur) break;
+            if (!pending.empty()) {
+                Txn t;
+                t.seq = cur;
+                t.items.swap(pending);
+                transaction.push_back(std::move(t));
+            }
+            pending.clear();
+            ++cur;
+        } else if (type == JBD2_BLOCKTYPE_REVOKE) {
+            const uint32_t rcount = Be32(buf.data() + 8);
+            if (rcount < 12 || rcount > m_blockSize) break;
+            for (uint32_t off = 12; off + revSize <= rcount; off += revSize) {
+                uint64_t bn = Be32(buf.data() + off);
+                if (has64)
+                    bn |= static_cast<uint64_t>(Be32(buf.data() + off + 4)) << 32;
+                auto it = m_revoke.find(bn);
+                if (it == m_revoke.end() || it->second < cur)
+                    m_revoke[bn] = cur;
+            }
+        } else {
+            break;
+        }
+        pos = advance(pos);
+    }
+
+    // ── phase 2: apply ────────────────────────────────────────────────────
+    uint64_t totalBlocks = m_sb.s_blocks_count_lo;
+    if (m_is64Bit)
+        totalBlocks |= static_cast<uint64_t>(m_sb.s_blocks_count_hi) << 32;
+
+    // The superblock is deliberately never overlaid: its geometry is what the
+    // rest of this parser was configured from, and swapping it mid-flight
+    // would re-interpret the volume under the code that is reading it.
+    const uint64_t sbBlock = (m_blockSize == 1024) ? 1 : 0;
+
+    constexpr size_t kMaxOverlayBytes = 256u << 20;
+    size_t bytes = 0;
+
+    // Built into a local map and swapped in at the end: if a transaction ever
+    // logs one of the journal's own blocks, reading it mid-apply must still
+    // return the raw device content, not the half-built overlay.
+    std::unordered_map<uint64_t, std::vector<uint8_t>> overlay;
+
+    for (const Txn& t : transaction) {
+        bool applied = false;
+        for (const Item& it : t.items) {
+            if (it.block == 0 || it.block >= totalBlocks) continue;
+            if (it.block == sbBlock) continue;
+
+            auto rv = m_revoke.find(it.block);
+            if (rv != m_revoke.end() && t.seq <= rv->second) continue;
+
+            if (bytes + m_blockSize > kMaxOverlayBytes) break;
+
+            std::vector<uint8_t> data(m_blockSize);
+            if (!ReadJournalAt(jmap, it.jidx, data.data())) continue;
+            if (it.escape) {   // writer zeroed a leading magic, restore it
+                data[0] = static_cast<uint8_t>(JBD2_MAGIC >> 24);
+                data[1] = static_cast<uint8_t>(JBD2_MAGIC >> 16);
+                data[2] = static_cast<uint8_t>(JBD2_MAGIC >>  8);
+                data[3] = static_cast<uint8_t>(JBD2_MAGIC);
+            }
+            overlay[it.block] = std::move(data);
+            bytes += m_blockSize;
+            applied = true;
+        }
+        if (applied) ++m_journalCommits;
+    }
+
+    m_overlay.swap(overlay);
+
+    if (!m_overlay.empty()) {
+        LOG_INFO(L"Ext4Parser: JBD2 replay applied "
+                 + std::to_wstring(m_journalCommits) + L" transaction(s), "
+                 + std::to_wstring(m_overlay.size()) + L" block(s) overlaid, "
+                 + std::to_wstring(m_revoke.size()) + L" revoke record(s)");
+    }
+    return !m_overlay.empty();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -169,12 +461,11 @@ bool Ext4Parser::ReadInode(uint32_t inodeNum, EXT4_INODE& outInode)
         inodeTableBlock |= (uint64_t)m_groupDescs[group].bg_inode_table_hi << 32;
 
     // Calculate byte offset of the inode within the table
-    uint64_t inodeOffset = m_partStartByte
-                         + inodeTableBlock * m_blockSize
-                         + static_cast<uint64_t>(localIdx) * m_inodeSize;
+    const uint64_t inodeOffset = inodeTableBlock * m_blockSize
+                               + static_cast<uint64_t>(localIdx) * m_inodeSize;
 
-    if (!m_reader->ReadBytes(inodeOffset, &outInode,
-                             std::min((uint32_t)sizeof(outInode), m_inodeSize))) {
+    if (!ReadFsBytes(inodeOffset, &outInode,
+                     std::min((uint32_t)sizeof(outInode), m_inodeSize))) {
         return false;
     }
 
@@ -200,10 +491,10 @@ bool Ext4Parser::ReadInodeRaw(uint32_t inodeNum, std::vector<uint8_t>& raw)
     if (m_is64Bit)
         inodeTableBlock |= (uint64_t)m_groupDescs[group].bg_inode_table_hi << 32;
 
-    const uint64_t off = m_partStartByte + inodeTableBlock * m_blockSize
+    const uint64_t off = inodeTableBlock * m_blockSize
                        + static_cast<uint64_t>(localIdx) * m_inodeSize;
     raw.resize(m_inodeSize);
-    return m_reader->ReadBytes(off, raw.data(), m_inodeSize);
+    return ReadFsBytes(off, raw.data(), m_inodeSize);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

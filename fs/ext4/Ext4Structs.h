@@ -306,4 +306,53 @@ constexpr uint8_t EXT4_FT_SYMLINK  = 7;
 constexpr uint32_t EXT4_NAME_LEN   = 255;
 constexpr uint32_t EXT4_ROOT_INO   = 2;
 
+// ─────────────────────────────────────────────────────────────────────────────
+// JBD2 journal
+//
+// Every field is big-endian and the structures are variable length, so they are
+// decoded by offset through Ext4Parser::Be32/Be16 instead of being memcpy'd
+// into a packed struct.
+//
+// Journal header (12 bytes, shared by every log block):
+//   +0x00  h_magic      be32  0xC03B3998
+//   +0x04  h_blocktype  be32  1..5
+//   +0x08  h_sequence   be32  transaction sequence (0 for superblock/revoke)
+//
+// Superblock (block 0 of the journal):
+//   +0x0C  s_blocksize        be32  must equal the filesystem block size
+//   +0x10  s_maxlen           be32  journal length in blocks
+//   +0x14  s_first            be32  first legal log block (normally 1)
+//   +0x18  s_sequence         be32  sequence of the first log block
+//   +0x1C  s_start            be32  0 = cleanly unmounted, nothing to replay
+//   +0x28  s_feature_incompat be32  bit1 = 64-bit block numbers (tag = 12 B)
+//
+// Descriptor block: 12-byte header then journal_block_tag_s records:
+//   be32 t_blocknr, be16 t_checksum, be16 t_flags [, be32 t_blocknr_high]
+// The data blocks follow the descriptor block, one per non-DELETED tag, in tag
+// order.  A transaction too large for one descriptor continues with another
+// descriptor block after the data blocks and ends at its commit block.
+//
+// Revoke block: 12-byte header (r_count at +0x08 counts bytes used, header
+// included) followed by be32 block numbers, or be64 when 64BIT is set.
+//
+// Replay rule (jbd2_journal_test_revoke): a logged copy survives only when its
+// transaction sequence is GREATER than the sequence of the last revoke record
+// for that block.  A revoke therefore cancels the copy logged in the same
+// transaction and every earlier one, but not a later re-log.
+// ─────────────────────────────────────────────────────────────────────────────
+constexpr uint32_t JBD2_MAGIC                = 0xC03B3998;
+constexpr uint32_t JBD2_BLOCKTYPE_DESCRIPTOR = 1;
+constexpr uint32_t JBD2_BLOCKTYPE_COMMIT     = 2;
+constexpr uint32_t JBD2_BLOCKTYPE_SB_V1      = 3;
+constexpr uint32_t JBD2_BLOCKTYPE_SB_V2      = 4;
+constexpr uint32_t JBD2_BLOCKTYPE_REVOKE     = 5;
+
+constexpr uint16_t JBD2_FLAG_ESCAPE    = 0x0001;  // first 4 B zeroed on disk
+constexpr uint16_t JBD2_FLAG_SAME_UUID = 0x0002;  // v1 only
+constexpr uint16_t JBD2_FLAG_DELETED   = 0x0004;  // no data block follows
+constexpr uint16_t JBD2_FLAG_LAST_TAG  = 0x0008;
+
+constexpr uint32_t JBD2_FEATURE_INCOMPAT_REVOKE = 0x0001;
+constexpr uint32_t JBD2_FEATURE_INCOMPAT_64BIT  = 0x0002;
+
 #pragma pack(pop)

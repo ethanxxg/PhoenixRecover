@@ -22,6 +22,18 @@
 //                   inside the inode body.  Without support the file body is
 //                   lost and the whole subtree under the inline directory
 //                   disappears.
+//   ext4-sparse     depth-1 extent tree with three extents separated by holes,
+//                   plus a legacy indirect map with a hole.  Missing hole
+//                   markers shift every byte after the gap (size matches,
+//                   sha256 does not).
+//   ext4-journal    JBD2 replay.  The inode-table block and the root directory
+//                   block of a new file exist only in the committed log; the
+//                   home copies are stale (inode slot zeroed, no dirent).  A
+//                   third transaction logs a directory block that is then
+//                   REVOKED, so a replay that ignores revokes produces a wrong
+//                   file list (poison.txt appears, keep.txt disappears).
+//   ext4-journal-clean  identical journal bytes with s_start = 0: a
+//                   checkpointed log must replay nothing at all.
 //
 // Also asserts the scan-source read-only invariant per image (whole-image
 // FNV-1a unchanged after scan + recovery).
@@ -91,6 +103,13 @@ struct Fixture
     long long                 imageBytes = 0;
     long long                 startSector = 0;
     std::vector<ExpectedFile> files;
+
+    // JBD2 variants: what replay must have done, and which names must stay
+    // absent (revoked, or never logged at all).
+    bool                     hasJournal = false;
+    long long                jnlApplied = -1;   // transactions contributing blocks
+    long long                jnlBlocks  = -1;   // overlaid blocks
+    std::vector<std::string> absent;
 };
 
 std::wstring FixtureDir()
@@ -127,6 +146,19 @@ bool LoadManifest(const std::wstring& jsonPath, Fixture& fx)
         fx.imageBytes = static_cast<long long>(v->AsNumber());
     if (const phoenix::JsonValue* v = root.Find("partitionStartSector"))
         fx.startSector = static_cast<long long>(v->AsNumber());
+
+    if (const phoenix::JsonValue* j = root.Find("journal")) {
+        fx.hasJournal = true;
+        if (const phoenix::JsonValue* v = j->Find("appliedTransactions"))
+            fx.jnlApplied = static_cast<long long>(v->AsNumber());
+        if (const phoenix::JsonValue* v = j->Find("overlayBlocks"))
+            fx.jnlBlocks = static_cast<long long>(v->AsNumber());
+    }
+    if (const phoenix::JsonValue* a = root.Find("absent")) {
+        if (a->IsArray())
+            for (const phoenix::JsonValue& item : a->array)
+                fx.absent.push_back(item.AsString());
+    }
 
     const phoenix::JsonValue* files = root.Find("files");
     if (!files || !files->IsArray()) return false;
@@ -303,6 +335,32 @@ void RunVariant(const Fixture& fx, bool autoProbe)
     const std::wstring outDir = MakeOutDir(std::wstring(fx.variant.begin(),
                                                          fx.variant.end()).c_str());
 
+    // ── JBD2: prove replay actually ran, and that it did not over-reach ───
+    if (fx.hasJournal) {
+        Ext4Parser* ep = dynamic_cast<Ext4Parser*>(parser.get());
+        CHECK(ep != nullptr, "journal variant resolves to Ext4Parser");
+        if (ep) {
+            std::printf("   journal: %u transaction(s), %u block(s) overlaid\n",
+                        ep->GetJournalCommitCount(), ep->GetJournalOverlayBlocks());
+            CHECK(static_cast<long long>(ep->GetJournalCommitCount()) == fx.jnlApplied,
+                  "journal replay applied the expected transaction count");
+            CHECK(static_cast<long long>(ep->GetJournalOverlayBlocks()) == fx.jnlBlocks,
+                  "journal overlay holds the expected block count");
+        }
+    }
+
+    // Names that must NOT be listed: a revoke that was ignored, or a clean
+    // journal that got replayed anyway, both show up here first.
+    for (const std::string& nm : fx.absent) {
+        const std::wstring w = Utils::Utf8ToWide(nm);
+        bool found = false;
+        for (const FileNode& n : nodes)
+            if (n.name == w) { found = true; break; }
+        CHECK(!found, "node must not be listed (revoked or never logged)");
+        std::printf("   %-28s %s (must be absent)\n", nm.c_str(),
+                    found ? "PRESENT  <-- WRONG" : "absent ok");
+    }
+
     for (const ExpectedFile& e : fx.files) {
         const FileNode* node = FindNode(nodes, e.path, e.name);
         std::printf("   %-28s ", e.name.c_str());
@@ -368,11 +426,13 @@ int main()
         bool        autoProbe;
     };
     const VariantSpec variants[] = {
-        {"ext4-base",     true},   // also proves the production probe chain
-        {"ext4-uninit",   false},
-        {"ext4-bigalloc", false},
-        {"ext4-inline",   false},
-        {"ext4-sparse",   false},  // depth-1 extent tree + holes, legacy indirect hole
+        {"ext4-base",          true},   // also proves the production probe chain
+        {"ext4-uninit",        false},
+        {"ext4-bigalloc",      false},
+        {"ext4-inline",        false},
+        {"ext4-sparse",        false},  // depth-1 extent tree + holes, legacy indirect hole
+        {"ext4-journal",       false},  // JBD2 replay: recovered from the log only
+        {"ext4-journal-clean", false},  // s_start == 0 must replay nothing
     };
 
     for (const VariantSpec& v : variants) {

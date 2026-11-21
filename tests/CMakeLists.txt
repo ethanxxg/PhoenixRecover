@@ -625,6 +625,8 @@ if(PHOENIX_SECTOR_READER)
         ${EXT4_FIXTURE_DIR}/ext4-bigalloc.img
         ${EXT4_FIXTURE_DIR}/ext4-inline.img
         ${EXT4_FIXTURE_DIR}/ext4-sparse.img
+        ${EXT4_FIXTURE_DIR}/ext4-journal.img
+        ${EXT4_FIXTURE_DIR}/ext4-journal-clean.img
     )
     if(PHOENIX_PY_CMD)
         add_custom_command(

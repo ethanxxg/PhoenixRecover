@@ -120,6 +120,11 @@ class Ext4Image:
         self.incompat = incompat
         self.ro_compat = ro_compat
         self.cluster_ratio = cluster_ratio          # blocks per cluster (bigalloc)
+        self.journal_inum = 0                       # s_journal_inum (0xE0)
+        # Post-assembly patches.  finish() writes the inode table from
+        # inodes_data, so a variant that needs a *stale home copy* (the JBD2
+        # fixture does) registers a hook instead of fighting the order.
+        self.hooks = []
 
         self.log_block_size = LOG_BY_SIZE[bs]
         self.log_cluster_size = self.log_block_size + (cluster_ratio.bit_length() - 1)
@@ -238,7 +243,11 @@ class Ext4Image:
         struct.pack_into("<I", sb, 0x5C, 0)                        # feature_compat
         struct.pack_into("<I", sb, 0x60, self.incompat)
         struct.pack_into("<I", sb, 0x64, self.ro_compat)
+        struct.pack_into("<I", sb, 0xE0, self.journal_inum)        # s_journal_inum
         self.write_at(1024, bytes(sb))
+
+        for hook in self.hooks:
+            hook(self.img)
         return bytes(self.img)
 
 
@@ -267,6 +276,81 @@ def manifest_entry(path, name, size, payload, status, kind="data"):
         "status": status,
         "kind": kind,
     }
+
+
+def dirblock(entries, bs):
+    """Assemble one directory block.
+
+    entries: list of (inode, name, file_type).  The last entry's rec_len runs
+    to the end of the block, exactly like a real ext4 directory.
+    """
+    body = b""
+    for i, (ino, name, ftype) in enumerate(entries):
+        last = (i == len(entries) - 1)
+        nb = name.encode("utf-8")
+        need = align4(8 + len(nb))
+        rec = (bs - len(body)) if last else need
+        assert rec >= need and rec % 4 == 0, (name, rec, need)
+        body += dirent(ino, name, ftype, rec)
+    assert len(body) == bs, (len(body), bs)
+    return body
+
+
+def itable_block_bytes(img, ino, override_raw):
+    """Serialise the inode-table block that holds `ino`, with `override_raw`
+    substituted for that slot.  Used to build a journal image of the inode
+    table from *before* the on-disk copy went stale."""
+    bs = img.bs
+    blk = img.itable_block + ((ino - 1) * img.inode_size) // bs
+    base = blk * bs - img.itable_block * bs          # offset within the table
+    buf = bytearray(bs)
+    for i, raw in img.inodes_data.items():
+        o = (i - 1) * img.inode_size
+        if base <= o and o + img.inode_size <= base + bs:
+            buf[o - base:o - base + img.inode_size] = raw
+    o = (ino - 1) * img.inode_size
+    buf[o - base:o - base + img.inode_size] = override_raw
+    return blk, bytes(buf)
+
+
+# ── JBD2 record writers (all fields big-endian) ─────────────────────────────
+JBD2_MAGIC = 0xC03B3998
+JBD2_DESCRIPTOR, JBD2_COMMIT, JBD2_SB_V2, JBD2_REVOKE = 1, 2, 4, 5
+JBD2_FLAG_LAST_TAG = 0x0008
+JBD2_INCOMPAT_REVOKE = 0x0001
+
+
+def jbd_super(bs, maxlen, first, seq, start):
+    b = struct.pack(">III", JBD2_MAGIC, JBD2_SB_V2, 0)          # h_sequence = 0
+    b += struct.pack(">IIIIII", bs, maxlen, first, seq, start, 0)
+    b += struct.pack(">III", 0, JBD2_INCOMPAT_REVOKE, 0)        # compat/incompat/ro
+    b += b"\x00" * 16                                           # s_uuid
+    b += struct.pack(">IIII", 1, 0, 0, 0)                       # nr_users, ...
+    return b + b"\x00" * (bs - len(b))
+
+
+def jbd_desc(bs, seq, targets):
+    """Descriptor block.  Targets are (blocknr, flags) in data-block order."""
+    body = struct.pack(">III", JBD2_MAGIC, JBD2_DESCRIPTOR, seq)
+    for i, (bn, flags) in enumerate(targets):
+        if i == len(targets) - 1:
+            flags |= JBD2_FLAG_LAST_TAG
+        # journal_block_tag_s: be32 blocknr, be16 checksum, be16 flags
+        body += struct.pack(">IHH", bn, 0, flags)
+    assert len(body) <= bs
+    return body + b"\x00" * (bs - len(body))
+
+
+def jbd_commit(bs, seq):
+    return struct.pack(">III", JBD2_MAGIC, JBD2_COMMIT, seq) + b"\x00" * (bs - 12)
+
+
+def jbd_revoke(bs, blocks):
+    # r_count counts the bytes used including the 12-byte header.
+    body = struct.pack(">III", JBD2_MAGIC, JBD2_REVOKE, 12 + 4 * len(blocks))
+    body += b"".join(struct.pack(">I", b) for b in blocks)
+    assert len(body) <= bs
+    return body + b"\x00" * (bs - len(body))
 
 
 # ── variants ────────────────────────────────────────────────────────────────
@@ -644,12 +728,173 @@ def build_sparse_depth():
     }
 
 
+JOURNAL_BLOCKS = 24
+
+
+def build_journal(clean=False):
+    """JBD2 replay: metadata that was committed to the journal but never
+    checkpointed to its home location.
+
+    This is the crash window a recovery tool exists for.  The file
+    `rescue.bin` was created, the kernel logged its inode-table block and the
+    root directory block, and then the machine died before either reached its
+    home block.  On disk the inode slot is zeroed and the directory has no
+    entry, so without replay the file is simply gone; with replay both come
+    back and the name is recovered instead of `inode_15`.
+
+    Log contents (24-block journal, s_start = 1):
+
+      jb[1..4]   txn 100: descriptor -> [inode-table block, dir block 0]
+                          data, data, commit
+      jb[5..8]   txn 101: descriptor -> [dir block 0]   (second version, adds
+                          later.txt), then a REVOKE for dir block 1, commit
+      jb[9..11]  txn 102: descriptor -> [dir block 1] (poison: poison.txt)
+                          data, commit
+      jb[12..13] txn 103: REVOKE dir block 1, commit
+
+    Expected outcome:
+      * inode table block 0  <- txn 100  -> rescue.bin exists
+      * dir block 0          <- txn 101  (last copy wins) -> rescue.bin AND
+                                            later.txt both carry names
+      * dir block 1          <- txn 102 is suppressed by the txn-103 revoke,
+                               so keep.txt survives and poison.txt must NOT
+                               appear.  A replayed-but-revoked block is the one
+                               way a bug here turns into a *wrong* file list.
+
+    `clean=True` writes the identical journal but with s_start = 0, i.e. the
+    log was checkpointed.  Nothing may be replayed: rescue.bin must stay gone.
+    That is the guard against "just read the journal area" instead of
+    "replay what s_start says is pending".
+    """
+    bs = 1024
+    inode_size = 256
+    img = Ext4Image(bs=bs, total_blocks=8192, inode_size=inode_size,
+                    incompat=INCOMPAT_FILETYPE | INCOMPAT_EXTENTS)
+
+    root_l0 = img.alloc(1)
+    root_l1 = img.alloc(1)
+    jblk    = img.alloc(JOURNAL_BLOCKS)
+
+    rescue  = pattern("rescue", 2048)
+    rb      = img.alloc(2)
+    img.write_at(rb * bs, rescue)
+    revoked = pattern("revoked", 1200)
+    vb      = img.alloc(2)
+    img.write_at(vb * bs, revoked + b"\x00" * (2 * bs - len(revoked)))
+    keep    = pattern("keep", 500)
+    kb      = img.alloc(1)
+    img.write_at(kb * bs, keep + b"\x00" * (bs - len(keep)))
+    later   = pattern("later", 700)
+    lb      = img.alloc(1)
+    img.write_at(lb * bs, later + b"\x00" * (bs - len(later)))
+
+    # inode 15 = rescue.bin: written to the image (so the bitmaps and counts
+    # stay sane) and then zeroed at home by the hook below.
+    img.put_inode(15, inode_bytes(S_IFREG | 0o644, len(rescue), 1, EXTENTS_FL,
+                                  extent_tree([(0, rb, 2, False)]),
+                                  2 * bs // 512))
+    img.put_inode(16, inode_bytes(S_IFREG | 0o644, len(revoked), 0, EXTENTS_FL,
+                                  extent_tree([(0, vb, 2, False)]),
+                                  2 * bs // 512, dtime=1700000900))
+    img.put_inode(17, inode_bytes(S_IFREG | 0o644, len(keep), 1, EXTENTS_FL,
+                                  extent_tree([(0, kb, 1, False)]), bs // 512))
+    img.put_inode(18, inode_bytes(S_IFREG | 0o644, len(later), 1, EXTENTS_FL,
+                                  extent_tree([(0, lb, 1, False)]), bs // 512))
+    img.put_inode(8, inode_bytes(S_IFREG | 0o600, JOURNAL_BLOCKS * bs, 1, EXTENTS_FL,
+                                 extent_tree([(0, jblk, JOURNAL_BLOCKS, False)]),
+                                 JOURNAL_BLOCKS * bs // 512))
+    img.journal_inum = 8
+
+    # ── home state: the interrupted transaction never landed here ──────────
+    img.write_block(root_l0, dirblock([(ROOT_INO, ".", FT_DIR),
+                                       (ROOT_INO, "..", FT_DIR),
+                                       (16, "revoked.bin", FT_REG)], bs))
+    img.write_block(root_l1, dirblock([(17, "keep.txt", FT_REG)], bs))
+
+    def zero_home_rescue(buf):
+        off = img.itable_block * bs + (15 - 1) * inode_size
+        buf[off:off + inode_size] = b"\x00" * inode_size
+    img.hooks.append(zero_home_rescue)
+
+    # ── journal images ─────────────────────────────────────────────────────
+    itbl_blk, itbl_img = itable_block_bytes(img, 15, img.inodes_data[15])
+
+    dir_v1 = dirblock([(ROOT_INO, ".", FT_DIR), (ROOT_INO, "..", FT_DIR),
+                       (16, "revoked.bin", FT_REG),
+                       (15, "rescue.bin", FT_REG)], bs)
+    dir_v2 = dirblock([(ROOT_INO, ".", FT_DIR), (ROOT_INO, "..", FT_DIR),
+                       (16, "revoked.bin", FT_REG),
+                       (15, "rescue.bin", FT_REG),
+                       (18, "later.txt", FT_REG)], bs)
+    dir_poison = dirblock([(19, "poison.txt", FT_REG)], bs)
+
+    log = {
+        0:  jbd_super(bs, JOURNAL_BLOCKS, 1, 100, 0 if clean else 1),
+        1:  jbd_desc(bs, 100, [(itbl_blk, 0), (root_l0, 0)]),
+        2:  itbl_img,
+        3:  dir_v1,
+        4:  jbd_commit(bs, 100),
+        5:  jbd_desc(bs, 101, [(root_l0, 0)]),
+        6:  dir_v2,
+        7:  jbd_revoke(bs, [root_l1]),
+        8:  jbd_commit(bs, 101),
+        9:  jbd_desc(bs, 102, [(root_l1, 0)]),
+        10: dir_poison,
+        11: jbd_commit(bs, 102),
+        12: jbd_revoke(bs, [root_l1]),
+        13: jbd_commit(bs, 103),
+    }
+    for idx, data in log.items():
+        img.write_block(jblk + idx, data)
+
+    # ── root directory inode (2 blocks, no holes) ──────────────────────────
+    img.put_inode(ROOT_INO, inode_bytes(S_IFDIR | 0o755, 2 * bs, 3, EXTENTS_FL,
+                                        extent_tree([(0, root_l0, 2, False)]),
+                                        2 * bs // 512, inode_size=inode_size))
+    img.put_inode(1, inode_bytes(0, 0, 1, 0, b"", 0, inode_size=inode_size))
+
+    files = []
+    absent = ["poison.txt"]
+    if clean:
+        name = "ext4-journal-clean"
+        purpose = ("journal that was cleanly checkpointed (s_start = 0): "
+                   "nothing may be replayed")
+        journal = {"start": 0, "appliedTransactions": 0, "overlayBlocks": 0}
+        absent += ["rescue.bin", "later.txt"]
+    else:
+        name = "ext4-journal"
+        purpose = ("JBD2 replay: inode + dirent only exist in the committed log; "
+                   "a revoked block must stay at its home content")
+        journal = {"start": 1, "appliedTransactions": 2, "overlayBlocks": 2}
+        files.append(manifest_entry("\\rescue.bin", "rescue.bin", len(rescue),
+                                    rescue, "normal"))
+        files.append(manifest_entry("\\later.txt", "later.txt", len(later),
+                                    later, "normal"))
+
+    files.append(manifest_entry("\\keep.txt", "keep.txt", len(keep), keep, "normal"))
+    files.append(manifest_entry("\\revoked.bin", "revoked.bin", len(revoked),
+                                revoked, "deleted"))
+
+    return img, {
+        "variant": name,
+        "purpose": purpose,
+        "partitionStartSector": 0,
+        "blockSize": bs,
+        "clusterRatio": 1,
+        "journal": journal,
+        "absent": absent,
+        "files": files,
+    }
+
+
 VARIANTS = {
     "ext4-base": build_base,
     "ext4-uninit": build_uninit,
     "ext4-bigalloc": build_bigalloc,
     "ext4-inline": build_inline,
     "ext4-sparse": build_sparse_depth,
+    "ext4-journal": lambda: build_journal(False),
+    "ext4-journal-clean": lambda: build_journal(True),
 }
 
 

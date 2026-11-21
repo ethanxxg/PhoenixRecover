@@ -6,6 +6,7 @@
 #include <vector>
 #include <string>
 #include <set>
+#include <unordered_map>
 #include <atomic>
 #include <functional>
 
@@ -29,6 +30,14 @@ public:
     void SetFileFoundCallback(FileFoundCallback cb) override
          { m_onFileFound = std::move(cb); }
 
+    // ── JBD2 replay diagnostics ───────────────────────────────────────────
+    // The depth gate asserts on these so a recovered file cannot be attributed
+    // to luck: the name only exists in the journal, so it can only come back
+    // if the overlay was really built.
+    uint32_t GetJournalCommitCount()   const { return m_journalCommits; }
+    uint32_t GetJournalOverlayBlocks() const
+         { return static_cast<uint32_t>(m_overlay.size()); }
+
 private:
     // ── Inode reading ─────────────────────────────────────────────────────
     bool ReadInode(uint32_t inodeNum, EXT4_INODE& outInode);
@@ -48,6 +57,30 @@ private:
     // ── Block reading (handles 64-bit block addresses) ────────────────────
     bool ReadBlock(uint64_t blockNum, void* buffer);
     bool ReadBlocks(uint64_t startBlock, uint32_t count, void* buffer);
+
+    // ── Byte-level read that honours the journal overlay ──────────────────
+    // Every path that touches metadata (ReadBlock/ReadBlocks/ReadInode/
+    // ReadInodeRaw) funnels through here, because ReadInode* address the inode
+    // table arithmetically instead of going through ReadBlock.
+    bool ReadFsBytes(uint64_t byteOffset, void* buffer, uint32_t len);
+
+    // ── JBD2 journal replay ───────────────────────────────────────────────
+    // The scan source is strictly read-only, so replay is an in-memory
+    // overlay (block number -> committed content) rather than a write-back:
+    // the "unflushed" metadata is presented to the parser, never to the disk.
+    bool ReplayJournal();
+    bool JournalBlockMap(const EXT4_INODE& jinode, std::vector<uint64_t>& map);
+    bool ReadJournalAt(const std::vector<uint64_t>& map, uint32_t index, void* out);
+    bool ReloadGroupDescriptors();
+    static uint32_t Be32(const uint8_t* p)
+    {
+        return (static_cast<uint32_t>(p[0]) << 24) | (static_cast<uint32_t>(p[1]) << 16)
+             | (static_cast<uint32_t>(p[2]) <<  8) |  static_cast<uint32_t>(p[3]);
+    }
+    static uint16_t Be16(const uint8_t* p)
+    {
+        return static_cast<uint16_t>((static_cast<uint16_t>(p[0]) << 8) | p[1]);
+    }
 
     // ── Extent tree traversal ─────────────────────────────────────────────
     // Returns list of (physical_block, block_count) for the inode's data
@@ -128,6 +161,13 @@ private:
     std::vector<EXT4_GROUP_DESC> m_groupDescs;
     std::set<uint32_t>           m_visitedInodes;
     std::set<uint32_t>           m_seenInodes;
+
+    // JBD2 replay result.  Empty when the volume has no journal, when it was
+    // cleanly unmounted (s_start == 0) or when the log was unreadable.
+    std::unordered_map<uint64_t, std::vector<uint8_t>> m_overlay;
+    // block number -> sequence of the last revoke record naming it
+    std::unordered_map<uint64_t, uint32_t>             m_revoke;
+    uint32_t m_journalCommits = 0;
 
     std::vector<FileNode> m_files;
     uint64_t              m_nextId      = 1;

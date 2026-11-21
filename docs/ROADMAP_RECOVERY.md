@@ -369,6 +369,7 @@
 | **W10 全量回归与文档/工作记忆同步** | 受影响生产文件（Ext4Parser / ExfatParser / RawScan）并行回归 13/13 全绿（11.48 s） | W6–W9 四个新测试同跑全绿；W6–W9 工作写入 `.workbuddy/memory/2026-11-08.md`；§8「本批次明确未完成」已据实更新（见下） |
 | **W11 ext4 深度恢复对齐（2026-11-21）** | 新增独立金标生成器 `tools/make_ext4_fixture.py`（纯 Python 自写全部磁盘结构，不依赖 `mke2fs`；本机 WSL 被安全策略拦截）+ CTest `Ext4DepthFeatures`；修复 `fs/ext4/Ext4Parser.cpp` 四处真实缺陷（见下 CAR-004） | **129 checks / 0 failure**，5 个变体：extents+间接块+slack 删除名+孤儿 inode / uninit extent / bigalloc / inline_data（文件与目录均跨 60 B 边界走 ibody xattr）/ **多级 extent 树 + 稀疏洞**（depth=1 索引节点、文件中间 3 段空洞，以及 legacy 间接块洞）。每文件 SHA-256 + 整镜像 FNV-1a 只读不变量 |
 | **W12 ReFS 深度恢复接线（2026-11-21）** | 新增 `fs/refs/RefsParser.{h,cpp}`（`FileSystem` 适配层）+ 探测链接入 + `RecoverEngine` 簇语义扩展 + CTest `RefsRecoverBytes`；修复两个真实缺陷（见下 CAR-005） | **80 checks / 0 failure**（`refs-golden`：inline 2 个、extent 2 个、嵌套 `subdir/inside.txt` 1 个）。两轮源码级负向验证（VBR 读回 offset 11/13 → 4 项 FAIL；关子目录绑定 → 4 项 FAIL）后恢复全绿 |
+| **W13 ext4 JBD2 journal 回放（2026-11-21）** | `fs/ext4/Ext4Parser.{h,cpp}` 新增**只读内存 overlay** 回放（`ReadFsBytes` 统一读入口 + `ReplayJournal` 两阶段：先收集 revoke、再按日志序应用）；`tools/make_ext4_fixture.py` 新增自写 JBD2 记录生成器与两个变体 | **187 checks / 0 failure**（`ext4-journal` 2 事务/2 块、`ext4-journal-clean` 0/0）。日志独有的 `rescue.bin`、`later.txt` 按字节精确恢复；被 revoke 的目录块保持 home 内容（`keep.txt` 存活、`poison.txt` 不得出现）。三轮源码级负向验证（关回放 → 2 项 MISSING；忽略 revoke → `poison.txt` 出现 + `keep.txt` 消失；强制回放 clean 日志 → 2 项误报）后恢复全绿 |
 
 ### CAR-003：已删 exFAT 连续文件被 FAT 拼接器改写（W3 门禁发现并修复）
 
@@ -398,6 +399,23 @@
 2. **目录名无法绑定子对象（嵌套目录整棵丢失）**：ReFS 目录项（`kf=0x01`/`kf=0x02`）只带**条目序号**（该目录内 1,2,3…），**不携带子对象 OID**；`kf=0x02` 的 84 字节变体尾部 12 字节也全为零。原实现把该序号当 OID 调 `ListDirectory()`，必然落空。修复：以 **parent-child 表**（唯一权威 `parent OID → child OID`）重建树，名字按 B+ 树序绑定；当子对象数多于目录名数时，先剔除「B+ 树为空」的对象（命名目录必有行，别名/流对象必空），**仅在该剔除能让计数相等时才生效**，避免误删真实的空子目录。
 
 `refs-golden` 的 `refs_v314_*` 系列有 `subdir/inside.txt` 两级结构，是本条的唯一字节级门禁。
+
+### CAR-006：ext4 无 journal 回放（W13 补齐，非"缺陷修复"而是能力缺口）
+
+语义上这不是把某段代码写错，而是**整个能力缺失**：`Ext4Parser` 只读 home location，因此「元数据已提交到 JBD2 但未 checkpoint」的崩溃窗口里，文件在盘上就是不存在。这是恢复工具最该覆盖的场景，缺它等于把最常见的一类掉电/蓝屏损失直接判死。
+
+实现（`fs/ext4/Ext4Parser.{h,cpp}`）：
+
+1. **只读内存 overlay**：`m_overlay`（块号 → 已提交内容）挂在 `ReadFsBytes()`。扫描源**一个字节都不写**——不是"replay 后回滚"，而是从头到尾只读，整镜像 FNV-1a 不变有门禁守着。
+2. **所有元数据读取必须走同一入口**：`ReadInode` / `ReadInodeRaw` 是按 `bg_inode_table + idx * inode_size` **算出来直接读**的，从不经过 `ReadBlock`。只改 `ReadBlock` 会让 inode 表绕过 overlay，症状是"目录项回来了但 inode 还是空的"。故新增 `ReadFsBytes`，四个读取点全部归口。
+3. **两阶段回放，顺序不能省**：revoke 记录可能**排在它所取消的 descriptor 之后**（`Ext4Parser` 的 fixture 里就是这样：txn 102 记了块，txn 103 才 revoke）。边扫边应用会把已被取消的块写进 overlay。必须先整趟收集 `m_revoke`（块号 → 最大 revoke 序号），再按日志序应用。
+4. **revoke 判定照 `jbd2_journal_test_revoke`**：`t_seq <= revoke_seq` 才丢弃；**晚于 revoke 的重记有效**。写反会让"删目录项"这类负向事务反向生效。
+5. **只应用已提交事务**：坏 magic / 缺 commit / 序号跳变即结束扫描，`pending` 直接丢弃。这正是内核崩溃后的行为，也保证"半个事务"永不进入 overlay。
+6. **超级块永不 overlay**：几何是 `Open()` 的其余逻辑赖以成立的前提，中途替换等于让读它的代码重新解释整个卷。GDT 则在回放后**重读一次**（组描述符本身可能被日志化）。
+7. **`s_start == 0` 必须短路**：那表示日志已 checkpoint，盘上就是最新状态。缺这道判断就会把"日志区里有内容"当成"有待回放事务"，凭空造出已删除的文件——`ext4-journal-clean` 变体专职守这条。
+8. **兼容现代日志**：`journal_block_tag_s` 无论是否启用 csum v2/v3 都是 8 B（64BIT 时 12 B），checksum 字段只在不校验时被忽略，故 tag 解析对 `metadata_csum` 卷同样成立；实现按 `JBD2_FEATURE_INCOMPAT_64BIT` 选 12/8 B，并支持 `JBD2_FLAG_ESCAPE`（首 4 B 被写成 0 时还原 magic）与 `JBD2_FLAG_DELETED`（不占数据块）。
+
+**仍未覆盖**：JBD2 checksum 校验（v2/v3 的 tag/commit CRC）、`metadata_csum` 的 inode/组描述符校验、外部日志设备（`s_journal_dev`）、`FLEX_BG` 跨组 GDT 重放；真实掉电卷未测。
 
 ### 本批次已闭环（W6–W9，此前列为未完成，现据实更正）
 

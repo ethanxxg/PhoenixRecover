@@ -147,7 +147,7 @@
 | `BitLockerCrypto` / `BitLockerVolume` | FIPS 向量 + `testdata/bitlocker-golden/` 合成加密卷金标（A1-3a） |
 | `RefsCrypto` / `RefsVolume` | 标准 CRC / FIPS SHA-256 向量 + `testdata/refs-golden/` 合成 ReFS 卷金标（A1-5a，**非真实 Windows ReFS 卷**） |
 | `RefsParser` | `testdata/refs-golden/` 端到端字节门禁 CTest `RefsRecoverBytes`（A1-5b 接口接线：inline / extent / 嵌套目录共 6 条目逐文件 SHA-256 + 整镜像 FNV-1a；**合成卷，真实 ReFS 卷未验**） |
-| `Ext4Parser`（深度） | `tools/make_ext4_fixture.py` 独立生成器 5 变体金标 + CTest `Ext4DepthFeatures`（extents/间接块/slack 删除名/孤儿 inode、uninit extent、bigalloc、inline_data 文件与目录、depth=1 extent 树 + 稀疏洞，129 项） |
+| `Ext4Parser`（深度） | `tools/make_ext4_fixture.py` 独立生成器 7 变体金标 + CTest `Ext4DepthFeatures`（extents/间接块/slack 删除名/孤儿 inode、uninit extent、bigalloc、inline_data 文件与目录、depth=1 extent 树 + 稀疏洞、**JBD2 回放与其 clean 反例**，187 项） |
 | `RaidProbe` / `ScanSourceChain` | `testdata/raid-probe-golden/` 合成 mdadm 成员盘与组合链金标 + 既有 `bitlocker-golden/` / `refs-golden/` 期望表（A1-4b-a，**非真实阵列**） |
 | `SignatureMatcher` | `testdata/signature-matcher-golden/` 合成 64 KiB 镜像 + 独立 Python oracle 期望表（A1-6 / 并行轨：按类型恢复参数化引擎底座，**已接 `RawScan` 主路径**：`SignatureDB::ScanBatch` 流式 AC 批扫描替换线性 `memcmp`；A1-7 `DeepScan` 损坏 NTFS 回退 RAW 雕刻、A1-8 并行 RAW 扫描分块+合并均由对应 CTest 覆盖） |
 | `DeepScan` 损坏 NTFS/FAT 回退（A1-7） | 合成损坏 NTFS 镜像（合法 boot 扇区 + 垃圾 MFT + 植入 header-only magic）；CTest `DeepScanFallback` 正向：识别 FS 但结构化解析 < 8 文件时回退 `RawScan` RAW 雕刻并恢复植入 magic；反向：无 FS 识别时零恢复（回退门控正确） |
@@ -329,7 +329,7 @@ ctest -C Release -R CFReDS_DFR05 --test-dir build\regress
 |---|--------|--------|----------------|------|------------|
 | 1 | 统一深度扫描（用户无感三阶段） | 🟢 | 🟢 已实现 `UnifiedVolumeScanner` | 小：阶段文案与耗时优化 | P1 |
 | 2 | FAT/NTFS/exFAT 删除恢复 | 🟢 | 🟡 DFR-01 + **DFR-05** CTest；**W2 补 exFAT 自动探测链 `ExfatProbeDispatch`，W3 补 `ExfatRecoverBytes` 真实 exFAT 恢复字节/MD5 门禁并修复 CAR-003（已删连续流被 FAT 拼接器改写）**；仍缺多簇/碎片化 exFAT 门禁 | 中：补碎片化 exFAT / EXT 镜像 | **P0** |
-| 3 | ext2/3/4 删除恢复 | 🟢 | 🟡 有 `Ext4Parser`；**已有 `CFReDS_EXT4_DFR01` 与 `DFR_Linux_Batch` CTest（W4 校正旧「无 CTest」表述）**；仍缺 ext2/3 独立金标样本 | 中 | P1 |
+| 3 | ext2/3/4 删除恢复 | 🟢 | 🟡 有 `Ext4Parser`，含 **JBD2 journal 只读回放**（可救回「元数据已提交未 checkpoint」的掉电窗口）；**已有 `CFReDS_EXT4_DFR01` 与 `DFR_Linux_Batch` CTest（W4 校正旧「无 CTest」表述）**；仍缺 ext2/3 独立金标样本、JBD2 checksum 校验、真实掉电卷 | 中 | P1 |
 | 4 | 格式化 / 分区丢失 | 🟢 | 🟡 Deep+Raw 有；**W3 补合成金标 `FormattedVolumeRecovery`**（快速格式化模型，22 项，双工具链绿），已进 `expected_results.csv`；真实快速格式化磁盘仍未测 | 中 | P1 |
 | 5 | 碎片 / 交织碎片 | 🟢 | 🟡 DFR-05 **元数据删除可见**已 CTest；**恢复字节/交织重组**仍有限 | 大 | **P0**（恢复写出） |
 | 6 | 10 万+ 结果 UI | 🟢 | 🟡 有 `DESIGN_LargeResultUI`；缺实测 | 中 | **P0**（体验） |
