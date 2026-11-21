@@ -1807,3 +1807,10 @@ if(PHOENIX_BUILD_BENCH AND PHOENIX_SECTOR_READER)
         target_link_libraries(bench_rawscan_parallel PRIVATE ${PHOENIX_PLATFORM_LIBS})
     endif()
 endif()
+
+# --- TestDisk-alignment gate: partition write-back + boot repair planners ---
+# Both headers are pure computation (no Qt / Win32 / I/O), so this target needs
+# no platform sources and runs on every toolchain.
+add_executable(test_repair_align test_repair_align.cpp)
+phoenix_add_test(test_repair_align)
+add_test(NAME RepairAlign COMMAND test_repair_align)
