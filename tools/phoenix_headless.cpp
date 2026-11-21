@@ -44,6 +44,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -114,6 +115,9 @@ struct Args {
     uint32_t    readAheadMB = 0;
     // P0-4: output-path isolation (default ON). See SafeLeaf() below.
     bool        keepOriginalPaths = false;
+    // P0-14: flat isolated output. One file per shard root instead of one
+    // directory per id; avoids ~872k CreateDirectoryRecursive calls.
+    bool        flatOutput = false;
     // P0-6: engine-side file-format matching. ON by default for `recover`;
     // `scan` only probes a bounded subset unless --ids is supplied.
     bool        engineFormat = true;
@@ -134,6 +138,76 @@ static bool IsSystemNode(const FileNode& n)
     return !n.name.empty() && n.name[0] == L'$';
 }
 
+// Minimal RFC-4180-style split for the result CSV written by `recover`.
+static std::vector<std::string> SplitCsvLine(const std::string& line)
+{
+    std::vector<std::string> out;
+    std::string cur;
+    bool quoted = false;
+    for (size_t i = 0; i < line.size(); ++i) {
+        const char c = line[i];
+        if (c == '"') {
+            if (quoted && i + 1 < line.size() && line[i + 1] == '"') {
+                cur += '"';
+                ++i;
+            } else {
+                quoted = !quoted;
+            }
+        } else if (c == ',' && !quoted) {
+            out.push_back(cur);
+            cur.clear();
+        } else {
+            cur += c;
+        }
+    }
+    out.push_back(cur);
+    return out;
+}
+
+struct VerifyRow {
+    uint64_t    id = 0;
+    std::string path;
+};
+
+// The id list comes from the ENGINE result CSV (and optionally an explicit
+// shard filter).  The independent oracle is never consulted here.
+static std::vector<VerifyRow> ReadRecoverResultRows(const std::string& csvPath,
+                                                     const std::string& idsPath)
+{
+    std::unordered_set<std::string> wanted;
+    if (!idsPath.empty()) {
+        std::ifstream f(idsPath);
+        std::string line;
+        while (std::getline(f, line))
+            if (!line.empty()) wanted.insert(line);
+    }
+
+    std::vector<VerifyRow> out;
+    std::ifstream f(csvPath);
+    if (!f) {
+        std::cerr << "cannot read result CSV " << csvPath << "\n";
+        return out;
+    }
+    std::string line;
+    std::getline(f, line);  // header
+    const std::vector<std::string> head = SplitCsvLine(line);
+    size_t idCol = 0, statusCol = 1, pathCol = 2;
+    for (size_t i = 0; i < head.size(); ++i) {
+        if (head[i] == "id") idCol = i;
+        else if (head[i] == "status") statusCol = i;
+        else if (head[i] == "targetPath") pathCol = i;
+    }
+    while (std::getline(f, line)) {
+        if (line.empty()) continue;
+        const std::vector<std::string> c = SplitCsvLine(line);
+        if (c.size() <= pathCol) continue;
+        if (c[statusCol] != "0") continue;           // only successful recoveries
+        if (!wanted.empty() && !wanted.count(c[idCol])) continue;
+        out.push_back({std::strtoull(c[idCol].c_str(), nullptr, 10), c[pathCol]});
+    }
+    return out;
+}
+
 bool ParseArgs(int argc, char** argv, Args& a)
 {
     if (argc < 2) return false;
@@ -152,6 +226,8 @@ bool ParseArgs(int argc, char** argv, Args& a)
             a.readAheadMB = (uint32_t)std::strtoul(v.c_str(), nullptr, 10);
         else if (k == "--keep-original-paths")
             a.keepOriginalPaths = (std::atoi(v.c_str()) != 0);
+        else if (k == "--flat-output")
+            a.flatOutput = (std::atoi(v.c_str()) != 0);
         else if (k == "--engine-format")
             a.engineFormat = (std::atoi(v.c_str()) != 0);
         else if (k == "--format-probe-bytes")
@@ -489,10 +565,16 @@ int CmdRecover(const Args& a)
     if (!a.keepOriginalPaths) {
         size_t seq = 0;
         for (auto& n : selected) {
-            n.originalPath = L"f" + std::to_wstring(seq++) + L"_" +
-                             std::to_wstring(n.id) + L"\\" + SafeLeaf(n.name);
+            const std::wstring prefix = L"f" + std::to_wstring(seq++) +
+                                        L"_" + std::to_wstring(n.id) + L"_";
+            n.originalPath = a.flatOutput ? prefix + SafeLeaf(n.name)
+                                          : prefix.substr(0, prefix.size() - 1) +
+                                            L"\\" + SafeLeaf(n.name);
         }
-        std::cerr << "[engine] output path mode: isolated by id (collision-safe)\n";
+        std::cerr << "[engine] output path mode: "
+                  << (a.flatOutput ? "flat isolated (no per-id directories)"
+                                   : "isolated by id (collision-safe)")
+                  << "\n";
     } else {
         std::cerr << "[engine] output path mode: original (collision-prone, "
                      "defect reproduction)\n";
@@ -568,20 +650,206 @@ int CmdRecover(const Args& a)
 
 } // namespace
 
+// ─────────────────────────────────────────────────────────────────────────────
+// CmdVerify — ENGINE-SIDE verification of recovered files.
+//
+// The oracle hash is useful as an independent cross-check, but the verdict
+// must also be reproducible with product code. This command re-opens the raw
+// image with the production SectorReader, re-discovers nodes with the same
+// NtfsParser path used by `scan`, rebuilds each file's bytes from the engine's
+// own runlist, and compares them byte-for-byte against what `recover` wrote.
+// No Python, no oracle CSV, no candidate source other than the engine result.
+// ─────────────────────────────────────────────────────────────────────────────
+int CmdVerify(const Args& a)
+{
+    if (a.result.empty() || a.out.empty()) {
+        std::cerr << "verify needs --result <recover csv> and --out <verify csv>\n";
+        return 2;
+    }
+    const std::vector<VerifyRow> rows = ReadRecoverResultRows(a.result, a.ids);
+    std::cerr << "[engine] verify rows=" << rows.size() << "\n";
+
+    SectorReader reader;
+    Partition part;
+    if (!OpenVolume(reader, a.disk, a.image, a.boot, part)) return 3;
+    if (a.readAheadMB) {
+        reader.SetReadAheadWindow(a.readAheadMB * 1024u * 1024u);
+        std::cerr << "[engine] verify read-ahead=" << a.readAheadMB << " MiB\n";
+    }
+
+    const uint32_t ss = reader.GetSectorSize() ? reader.GetSectorSize() : 512;
+    std::vector<uint8_t> boot(ss);
+    if (!reader.ReadSectors(a.boot, boot.data(), 1)) return 3;
+    uint32_t bps = (uint32_t)boot[11] | ((uint32_t)boot[12] << 8);
+    uint32_t spc = boot[13];
+    if (!bps) bps = ss;
+    if (!spc) spc = 1;
+    const uint32_t bytesPerCluster = bps * spc;
+
+    const std::vector<FileNode> all = EnumerateNodes(reader, part);
+    std::unordered_map<uint64_t, std::vector<const FileNode*>> byId;
+    for (const FileNode& n : all) byId[n.id].push_back(&n);
+
+    std::ofstream out(a.out, std::ios::binary | std::ios::trunc);
+    if (!out) { std::cerr << "cannot write " << a.out << "\n"; return 4; }
+    out << "id,status,targetPath,reason,bytes,firstDiffOffset\n";
+
+    uint64_t matched = 0, mismatched = 0, skipped = 0, failed = 0, bytes = 0;
+    constexpr size_t CHUNK = 1u << 20;
+    std::vector<uint8_t> imgBuf(CHUNK), fileBuf(CHUNK);
+
+    for (const VerifyRow& row : rows) {
+        const auto it = byId.find(row.id);
+        const FileNode* node = nullptr;
+        if (it != byId.end()) {
+            // An id may have several NTFS stream nodes. Prefer the node whose
+            // recovered leaf name matches, exactly like `recover` did.
+            std::string leaf = row.path.substr(
+                row.path.find_last_of("/\\") == std::string::npos
+                    ? 0 : row.path.find_last_of("/\\") + 1);
+            // Flat output leaves are "f<seq>_<id>_<original leaf>".
+            if (!leaf.empty() && leaf[0] == 'f') {
+                const size_t p1 = leaf.find('_');
+                const size_t p2 = p1 == std::string::npos
+                                      ? std::string::npos
+                                      : leaf.find('_', p1 + 1);
+                if (p1 != std::string::npos && p2 != std::string::npos) {
+                    leaf = leaf.substr(p2 + 1);
+                }
+            }
+            for (const FileNode* n : it->second) {
+                if (Utf8(SafeLeaf(n->name)) == leaf) { node = n; break; }
+            }
+            if (!node) node = it->second.front();
+        }
+        if (!node) {
+            out << row.id << ",skip," << Csv(row.path)
+                << ",\"no engine node\",0,0\n";
+            ++skipped;
+            continue;
+        }
+        if (node->isNtfsCompressed) {
+            out << row.id << ",skip," << Csv(row.path)
+                << ",\"ntfs compressed\",0,0\n";
+            ++skipped;
+            continue;
+        }
+
+        // MinGW's libstdc++ has no wide-path std::ifstream constructor; use
+        // the CRT wide-path API so Chinese file names open correctly.
+        FILE* f = _wfopen(Wide(row.path).c_str(), L"rb");
+        if (!f) {
+            out << row.id << ",error," << Csv(row.path)
+                << ",\"recovered file missing\",0,0\n";
+            ++failed;
+            continue;
+        }
+
+        uint64_t      done      = 0;
+        uint64_t      firstDiff = 0;
+        bool          ok        = true;
+        std::string   reason;
+
+        auto compareChunk = [&](const uint8_t* a, const uint8_t* b, size_t n) {
+            for (size_t i = 0; i < n; ++i) {
+                if (a[i] != b[i]) {
+                    ok = false;
+                    firstDiff = done + i;
+                    return;
+                }
+            }
+        };
+
+        if (!node->residentData.empty()) {
+            const size_t take = (size_t)std::min<uint64_t>(node->size,
+                                        node->residentData.size());
+            if (take) {
+                if (std::fread(fileBuf.data(), 1, take, f) != take) {
+                    ok = false;
+                    reason = "short file";
+                }
+                else compareChunk(node->residentData.data(), fileBuf.data(), take);
+                done = take;
+            }
+            if (ok && done != node->size) { ok = false; reason = "resident short"; }
+        } else if (node->size > 0 && node->clusters.empty()) {
+            ok = false;
+            reason = "no runlist";
+        } else {
+            for (uint64_t clus : node->clusters) {
+                if (done >= node->size) break;
+                uint64_t inCluster = 0;
+                const uint64_t span = std::min<uint64_t>(bytesPerCluster,
+                                                          node->size - done);
+                const uint64_t byteOff = part.startSector * (uint64_t)ss +
+                                         clus * (uint64_t)bytesPerCluster;
+                while (inCluster < span && ok) {
+                    const size_t take = (size_t)std::min<uint64_t>(CHUNK,
+                                                        span - inCluster);
+                    if (clus == 0) {
+                        std::memset(imgBuf.data(), 0, take);
+                    } else if (!reader.ReadBytes(byteOff + inCluster,
+                                                 imgBuf.data(), (uint32_t)take)) {
+                        ok = false;
+                        reason = "image read failed";
+                        break;
+                    }
+                    if (std::fread(fileBuf.data(), 1, take, f) != take) {
+                        ok = false;
+                        reason = "short file";
+                        break;
+                    }
+                    compareChunk(imgBuf.data(), fileBuf.data(), take);
+                    done += take;
+                    inCluster += take;
+                }
+                if (!ok) break;
+            }
+        }
+        if (ok && done != node->size) { ok = false; reason = "size mismatch"; }
+        std::fclose(f);
+
+        if (ok) {
+            ++matched;
+            bytes += done;
+        } else if (reason.empty()) {
+            ++mismatched;
+            reason = "byte mismatch";
+        } else {
+            ++failed;
+        }
+        out << row.id << ',' << (ok ? "match" : (reason == "byte mismatch" ? "mismatch" : "error")) << ','
+            << Csv(row.path) << ',' << Csv(reason) << ',' << done << ','
+            << firstDiff << '\n';
+
+        if ((matched + mismatched + skipped + failed) % 10000 == 0) {
+            std::cerr << "[engine] verify progress match=" << matched
+                      << " mismatch=" << mismatched << " skip=" << skipped
+                      << " error=" << failed << " bytes=" << bytes << "\n";
+        }
+    }
+    std::cerr << "[engine] VERIFY DONE match=" << matched
+              << " mismatch=" << mismatched << " skip=" << skipped
+              << " error=" << failed << " bytes=" << bytes
+              << " -> " << a.out << "\n";
+    return (mismatched || failed) ? 1 : 0;
+}
+
 int main(int argc, char** argv)
 {
     Args a;
     if (!ParseArgs(argc, argv, a)) {
-        std::cerr << "usage: phoenix_headless scan|enumerate|recover "
+        std::cerr << "usage: phoenix_headless scan|enumerate|recover|verify "
                      "--disk N | --image <raw> --boot LBA [--out csv] [--ids txt] "
                      "[--out-dir dir] [--result csv] [--limit N] "
-                     "[--engine-format 0|1] [--format-probe-bytes N] "
-                     "[--format-sample N]\n";
+                     "[--read-ahead-mb N] [--engine-format 0|1] "
+                     "[--format-probe-bytes N] [--format-sample N]\n";
         return 2;
     }
     if (a.cmd == "scan")      return CmdScan(a);
     if (a.cmd == "enumerate") return CmdEnumerate(a);
     if (a.cmd == "recover")   return CmdRecover(a);
+    if (a.cmd == "verify")    return CmdVerify(a);
     std::cerr << "unknown command: " << a.cmd << "\n";
     return 2;
 }
