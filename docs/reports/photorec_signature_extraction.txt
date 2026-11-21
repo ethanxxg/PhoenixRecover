@@ -1,0 +1,27 @@
+PhotoRec declarative signature extraction
+  source files          : 350
+  file_hint_t entries   : 351
+  register_header_check : 404
+  resolved magic        : 408
+  unique (ext,off,magic): 408
+  duplicate of built-in : 40
+  wildcard/invalid ext  : 13 (gm* tx?)
+  low entropy (rejected): 1 (dovecot=0000000000000000)
+  main library          : 321 sigs / 235 extensions (magic >= 3 bytes)
+  low-confidence        : 33 sigs / 12 extensions (magic <  3 bytes)
+  files without hint    : 4
+  unresolved arrays     : 6
+  unresolved offsets    : 0
+  -- unresolved arrays (first 20) --
+     file_elf.c:elf_header32_lsb
+     file_elf.c:elf_header32_msb
+     file_elf.c:elf_header64_lsb
+     file_elf.c:elf_header64_msb
+     file_shp.c:shp_header
+     file_template.c:EXTENSION_header
+
+Main-library extensions (235):
+1cd 3ds a abr acb accdb afdesign ahn all als amd apa apple ari asf asl asm atd axp axx bac bfa bim bin bpg bvr caf cam catdrawing cdt chm comicdoc cow cp_ csh ctg cwk d2s dar dat db dbn dcm ddf diskimage djv dmp doc drw ds2 ds_store dsc dss dta dump dv dvi dwg dxf e01 edb emf evt exr exs ext fbf fbk fcp fdb fds fh10 fh5 fit flac flp fm fp5 fp7 freeway frm fs fxp gam gct gho gi gp2 gp5 gpg gz hdf hds hm hr9 icc ico ifo imb indd info iso itu jks jpg kdb kdbx ldf lit lnk logic lso luks lxo lz m2ts mat mcd mdb mdf mfa mfg mid mig mk5 mpg msa mus mxf myi nds njx nk2 nsf oci ogg one orf pa paf pap par2 pcap pcb pct pdf pds pf pfx plr plt png prc prd prt ps psb psd pst ptb ptf pyc pzf pzh qbb qdf qkt qxd r3d raw rdc reg res rfp rlv rm rpm rx2 save sdsk sdw sgcta shn sib sit skd skp snag snz sp3 sparseimage spe spf sqm steuer2014 tar tax tg tib tivo tph tpl ts txt tz vault vdi vdj veg vfb vib vmdk vmg wallet wee win wks wld wmf wnk wpb wtv x3f x3i x4a xfi xfs xm xml xpt xsv xv xz zcode zip
+
+Low-confidence extensions (12):
+ab crw ecryptfs ext ext2 fat gpg gsm mp3 myi pcx z2d

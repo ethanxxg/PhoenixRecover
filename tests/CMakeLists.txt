@@ -1814,3 +1814,25 @@ endif()
 add_executable(test_repair_align test_repair_align.cpp)
 phoenix_add_test(test_repair_align)
 add_test(NAME RepairAlign COMMAND test_repair_align)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# W18 — PhotoRec carving alignment.
+#   scan/PhotoRecSignatures.h is generated from TestDisk 7.2 src/file_*.c by
+#   tools/gen_photorec_signatures.py and registered by SignatureDB's ctor.
+#   This gate proves every extracted magic is present and Match()-resolvable,
+#   and that no degenerate (<=2 byte) magic slipped into the default set.
+add_executable(test_photorec_align
+    test_photorec_align.cpp
+    ${CMAKE_SOURCE_DIR}/scan/SignatureDB.cpp
+    ${CMAKE_SOURCE_DIR}/scan/UiTypeSignatureSupplement.cpp
+    ${CMAKE_SOURCE_DIR}/scan/ExtensionCoverage.cpp
+    ${CMAKE_SOURCE_DIR}/common/UiFileTypeCatalog.cpp
+    ${CMAKE_SOURCE_DIR}/common/Utils.cpp
+    ${CMAKE_SOURCE_DIR}/log/Logger.cpp
+)
+target_compile_definitions(test_photorec_align PRIVATE
+    PHOENIX_BUILD_GUI=0
+    PHOENIX_SOURCE_DIR=L"${CMAKE_SOURCE_DIR}"
+)
+phoenix_add_test(test_photorec_align)
+add_test(NAME PhotoRecAlign COMMAND test_photorec_align)

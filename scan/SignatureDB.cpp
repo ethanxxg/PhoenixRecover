@@ -1,6 +1,7 @@
 #include "SignatureDB.h"
 #include "SignatureJson.h"
 #include "UiTypeSignatureSupplement.h"
+#include "PhotoRecSignatures.h"
 #include "../log/Logger.h"
 #include "../common/Utils.h"
 #include <fstream>
@@ -1342,6 +1343,15 @@ SignatureDB::SignatureDB()
     m_sigs.push_back(mk(L"riff",  "52494646",           nullptr, 0, 500));
 
     RegisterUiTypeSignatureSupplement(*this);
+
+    // ── PhotoRec 7.2 declarative alignment ────────────────────────────────
+    // Third-party formats PhotoRec can carve but we had no magic for.  Only
+    // its declarative register_header_check() layer is reproduced (generated
+    // from src/file_*.c by tools/gen_photorec_signatures.py); magics shorter
+    // than 3 bytes are excluded because their random-data match density makes
+    // carving unusable.  Appended AFTER the built-in table so every existing
+    // signature keeps its lower pattern id and therefore wins ties.
+    phoenix::RegisterPhotoRecAlignSignatures(*this);
 
     LOG_INFO(L"SignatureDB: loaded " + std::to_wstring(m_sigs.size()) + L" built-in signatures");
 }
