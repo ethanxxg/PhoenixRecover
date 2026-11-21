@@ -1,8 +1,23 @@
 #include "Ext4Parser.h"
 #include "../../common/Utils.h"
 #include "../../log/Logger.h"
+#include "../refs/RefsCrypto.h"   // phoenix::refs::Crc32C{Update,Finish} — shared CRC32C implementation
 #include <algorithm>
 #include <cstring>
+
+// JBD2 uses the same CRC32C polynomial (Castagnoli, reflected 0x82F63B78) as
+// ReFS, BUT the kernel's jbd2_chksum() == crc32c_le() returns the RAW
+// (non-xorout) chained state, which is fed straight into the next call.
+// j_csum_seed = jbd2_chksum(~0, journal_uuid, 16) is such a raw state, and
+// every jbd2_*_csum_verify() compares against a raw state too.  So we must use
+// Crc32CUpdate ONLY here — applying Crc32CFinish (xorout) would desync every
+// checksum.  (ReFS deliberately uses the xorout form; JBD2 does not.)
+namespace {
+inline uint32_t Jbd2Crc(uint32_t seed, const uint8_t* p, size_t n)
+{
+    return phoenix::refs::Crc32CUpdate(seed, p, n);   // no xorout
+}
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // UnixToFiletime – convert Unix timestamp to Windows FILETIME (100-ns ticks)
@@ -308,9 +323,79 @@ bool Ext4Parser::ReplayJournal()
     if (first == 0 || first >= maxlen) return false;
     if (start < first || start >= maxlen) return false;
 
-    const bool     has64   = (incompat & JBD2_FEATURE_INCOMPAT_64BIT) != 0;
-    const uint32_t tagSize = has64 ? 12u : 8u;   // journal_block_tag_s
+    const bool has64  = (incompat & JBD2_FEATURE_INCOMPAT_64BIT) != 0;
+    const bool hasCsum2 = (incompat & JBD2_FEATURE_INCOMPAT_CSUM_V2) != 0;
+    const bool hasCsum3 = (incompat & JBD2_FEATURE_INCOMPAT_CSUM_V3) != 0;
+    const bool hasCsum  = hasCsum2 || hasCsum3;
+
+    // Tag layout: legacy/v2-without-64bit = 8 B (be32 blocknr, be16 csum,
+    // be16 flags); v2-with-64bit = 12 B (adds be32 high); v3 = 16 B
+    // (be32 blocknr, be32 flags, be32 high, be32 csum) regardless of 64BIT.
+    // We refuse the 64-bit variants: this formatter writes block numbers
+    // below 2^32, and silently mis-parsing a foreign 64-bit tag would build a
+    // wrong overlay.  Refusing = no replay, the safe direction.
+    uint32_t tagSize;
+    if (hasCsum3)      tagSize = 16u;
+    else if (has64)    tagSize = 12u;   // v2 + 64bit (handled conservatively below)
+    else               tagSize = 8u;
     const uint32_t revSize = has64 ? 8u : 4u;
+    if (has64) return false;    // out of scope: avoid wrong overlay over silent acceptance
+
+    // j_csum_seed = jbd2_chksum(~0, s_uuid, 16).  The checksum field itself
+    // is a plain CRC32C final value; the UUID lives at journal SB +0x30.
+    uint32_t csumSeed = 0;
+    if (hasCsum) {
+        csumSeed = Jbd2Crc(0xFFFFFFFFu, buf.data() + JBD2_SB_UUID_OFF, 16);
+        // The superblock must carry the CRC32C checksum type; anything else
+        // is a format we don't implement → refuse rather than mis-verify.
+        if (buf.data()[0x50] != JBD2_CRC32C_CHKSUM) {
+            LOG_INFO(L"Ext4Parser JBD2 sb csum type FAIL val=" + std::to_wstring(buf.data()[0x50]));
+            return false;
+        }
+        // Verify the superblock's own checksum (s_checksum at 0xFC, computed
+        // over the block with that field zeroed).  A corrupt journal SB must
+        // never drive replay.
+        uint32_t provided = Be32(buf.data() + JBD2_SB_CHECKSUM_OFF);
+        std::vector<uint8_t> sbCopy(buf.begin(), buf.end());
+        std::memset(sbCopy.data() + JBD2_SB_CHECKSUM_OFF, 0, 4);
+        uint32_t sbCalc = Jbd2Crc(csumSeed, sbCopy.data(), m_blockSize);
+        if (provided != sbCalc) {
+            LOG_INFO(L"Ext4Parser JBD2 sb csum FAIL provided=" + std::to_wstring(provided)
+                     + L" calc=" + std::to_wstring(sbCalc)
+                     + L" seed=" + std::to_wstring(csumSeed)
+                     + L" type=" + std::to_wstring(buf.data()[0x50]));
+            return false;
+        }
+    }
+
+    // Verify a descriptor/revoke block tail: be32 at (blocksize - 4), computed
+    // over the whole block with that trailing field zeroed.
+    auto tailOk = [&](const uint8_t* p) -> bool {
+        if (!hasCsum) return true;
+        const uint32_t provided = Be32(p + m_blockSize - JBD2_JOURNAL_BLOCK_TAIL_SIZE);
+        std::vector<uint8_t> copy(p, p + m_blockSize);
+        std::memset(copy.data() + m_blockSize - JBD2_JOURNAL_BLOCK_TAIL_SIZE, 0, 4);
+        uint32_t calc = Jbd2Crc(csumSeed, copy.data(), m_blockSize);
+        if (provided != calc)
+            LOG_INFO(L"Ext4Parser JBD2 tail csum FAIL provided=" + std::to_wstring(provided)
+                     + L" calc=" + std::to_wstring(calc));
+        return provided == calc;
+    };
+    // Verify a data block's tag checksum: csum = crc32c(seed, be32(seq)) then
+    // crc32c(csum, data_block).  v3 stores be32, v2 stores low be16.
+    auto tagOk = [&](const uint8_t* tagp, uint32_t seq, const uint8_t* data,
+                     uint16_t storeCsumV2) -> bool {
+        if (!hasCsum) return true;
+        uint8_t seqBe[4] = { static_cast<uint8_t>(seq >> 24),
+                             static_cast<uint8_t>(seq >> 16),
+                             static_cast<uint8_t>(seq >> 8),
+                             static_cast<uint8_t>(seq) };
+        uint32_t state = phoenix::refs::Crc32CUpdate(csumSeed, seqBe, 4);
+        uint32_t c = Jbd2Crc(state, data, m_blockSize);
+        if (hasCsum3)
+            return Be32(tagp + 12) == c;
+        return storeCsumV2 == static_cast<uint16_t>(c & 0xFFFFu);
+    };
 
     struct Item { uint64_t block; uint32_t jidx; bool escape; };
     struct Txn  { uint32_t seq; std::vector<Item> items; };
@@ -333,17 +418,26 @@ bool Ext4Parser::ReplayJournal()
 
         if (type == JBD2_BLOCKTYPE_DESCRIPTOR) {
             if (Be32(buf.data() + 8) != cur) break;         // out of sequence
+            // A checksummed descriptor carries a 4-byte trailer; a corrupt
+            // trailer means the tag array cannot be trusted → end the walk.
+            if (!tailOk(buf.data())) break;
 
             // Collect the tag array first: the data blocks follow the whole
             // descriptor block, in tag order.
-            std::vector<std::pair<uint64_t, uint16_t>> tags;
+            struct Tag { uint64_t bn; uint16_t flags; uint16_t csumV2; size_t off; };
+            std::vector<Tag> tags;
+            const size_t tagLimit = m_blockSize - (hasCsum ? JBD2_JOURNAL_BLOCK_TAIL_SIZE : 0);
             size_t off = 12;
-            while (off + tagSize <= m_blockSize) {
+            while (off + tagSize <= tagLimit) {
                 uint64_t bn = Be32(buf.data() + off);
-                const uint16_t flags = Be16(buf.data() + off + 6);
-                if (has64)
-                    bn |= static_cast<uint64_t>(Be32(buf.data() + off + 8)) << 32;
-                tags.emplace_back(bn, flags);
+                uint16_t flags, csumV2 = 0;
+                if (hasCsum3) {
+                    flags = static_cast<uint16_t>(Be32(buf.data() + off + 4));
+                } else {
+                    csumV2 = Be16(buf.data() + off + 4);        // t_checksum (v2, low16)
+                    flags  = Be16(buf.data() + off + 6);        // t_flags
+                }
+                tags.emplace_back(Tag{bn, flags, csumV2, off});
                 off += tagSize;
                 if (flags & JBD2_FLAG_LAST_TAG) break;
             }
@@ -351,16 +445,48 @@ bool Ext4Parser::ReplayJournal()
 
             for (const auto& t : tags) {
                 uint32_t dataIdx = pos;
-                if (!(t.second & JBD2_FLAG_DELETED)) {
+                if (!(t.flags & JBD2_FLAG_DELETED)) {
                     dataIdx = advance(pos);     // consumed even if later revoked
                     pos     = dataIdx;
                 }
-                if (t.first == 0) continue;
-                pending.push_back(Item{t.first, dataIdx,
-                                       (t.second & JBD2_FLAG_ESCAPE) != 0});
+                if (t.bn == 0) continue;
+                // Verify the data block's per-tag checksum against the bytes
+                // we just located.  A bad tag csum skips only this block
+                // (jbd2_do_replay's `goto skip_write`), never corrupts others.
+                if (hasCsum && !(t.flags & JBD2_FLAG_DELETED)) {
+                    if (dataIdx >= jmap.size() || jmap[dataIdx] == 0) continue;
+                    std::vector<uint8_t> dblock(m_blockSize);
+                    if (!ReadJournalAt(jmap, dataIdx, dblock.data())) continue;
+                    if (!tagOk(buf.data() + t.off, cur,
+                               dblock.data(), t.csumV2)) {
+                        LOG_INFO(L"Ext4Parser JBD2 tag checksum mismatch for block "
+                                 + std::to_wstring(t.bn) + L"; skipping data block");
+                        continue;   // this data block is corrupt → skip it
+                    }
+                }
+                pending.push_back(Item{t.bn, dataIdx,
+                                       (t.flags & JBD2_FLAG_ESCAPE) != 0});
             }
         } else if (type == JBD2_BLOCKTYPE_COMMIT) {
             if (Be32(buf.data() + 8) != cur) break;
+            // A checksummed commit block's h_chksum[0] must verify; a torn or
+            // corrupted commit is exactly the crash window we must NOT replay.
+            if (hasCsum) {
+                if (buf.data()[JBD2_COMMIT_CSUM_TYPE_OFF] != JBD2_CRC32C_CHKSUM) {
+                    LOG_INFO(L"Ext4Parser JBD2 commit type FAIL val=" + std::to_wstring(buf.data()[JBD2_COMMIT_CSUM_TYPE_OFF]));
+                    break;
+                }
+                const uint32_t provided = Be32(buf.data() + JBD2_COMMIT_CSUM_OFF);
+                std::vector<uint8_t> cpy(buf.begin(), buf.end());
+                std::memset(cpy.data() + JBD2_COMMIT_CSUM_OFF, 0, 4);
+                uint32_t cc = Jbd2Crc(csumSeed, cpy.data(), m_blockSize);
+                if (provided != cc) {
+                    LOG_INFO(L"Ext4Parser JBD2 commit csum FAIL seq=" + std::to_wstring(cur)
+                             + L" provided=" + std::to_wstring(provided)
+                             + L" calc=" + std::to_wstring(cc));
+                    break;
+                }
+            }
             if (!pending.empty()) {
                 Txn t;
                 t.seq = cur;
@@ -372,10 +498,9 @@ bool Ext4Parser::ReplayJournal()
         } else if (type == JBD2_BLOCKTYPE_REVOKE) {
             const uint32_t rcount = Be32(buf.data() + 8);
             if (rcount < 12 || rcount > m_blockSize) break;
+            if (!tailOk(buf.data())) break;
             for (uint32_t off = 12; off + revSize <= rcount; off += revSize) {
                 uint64_t bn = Be32(buf.data() + off);
-                if (has64)
-                    bn |= static_cast<uint64_t>(Be32(buf.data() + off + 4)) << 32;
                 auto it = m_revoke.find(bn);
                 if (it == m_revoke.end() || it->second < cur)
                     m_revoke[bn] = cur;

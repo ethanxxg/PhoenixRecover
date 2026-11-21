@@ -352,7 +352,16 @@ constexpr uint16_t JBD2_FLAG_SAME_UUID = 0x0002;  // v1 only
 constexpr uint16_t JBD2_FLAG_DELETED   = 0x0004;  // no data block follows
 constexpr uint16_t JBD2_FLAG_LAST_TAG  = 0x0008;
 
-constexpr uint32_t JBD2_FEATURE_INCOMPAT_REVOKE = 0x0001;
-constexpr uint32_t JBD2_FEATURE_INCOMPAT_64BIT  = 0x0002;
+constexpr uint32_t JBD2_FEATURE_INCOMPAT_REVOKE    = 0x0001;
+constexpr uint32_t JBD2_FEATURE_INCOMPAT_64BIT     = 0x0002;
+constexpr uint32_t JBD2_FEATURE_INCOMPAT_CSUM_V2   = 0x0008;
+constexpr uint32_t JBD2_FEATURE_INCOMPAT_CSUM_V3   = 0x0010;
+constexpr uint32_t JBD2_CRC32C_CHKSUM              = 4;
+constexpr uint32_t JBD2_JOURNAL_BLOCK_TAIL_SIZE    = 4;  // struct jbd2_journal_block_tail{be32 t_checksum}
+// journal superblock field offsets (big-endian)
+constexpr uint32_t JBD2_SB_UUID_OFF       = 0x30;
+constexpr uint32_t JBD2_SB_CHECKSUM_OFF   = 0xFC;
+constexpr uint32_t JBD2_COMMIT_CSUM_OFF   = 0x10;  // commit_header.h_chksum[0]
+constexpr uint32_t JBD2_COMMIT_CSUM_TYPE_OFF = 0x0C;
 
 #pragma pack(pop)

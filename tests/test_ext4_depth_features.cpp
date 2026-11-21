@@ -34,6 +34,13 @@
 //                   file list (poison.txt appears, keep.txt disappears).
 //   ext4-journal-clean  identical journal bytes with s_start = 0: a
 //                   checkpointed log must replay nothing at all.
+//   ext4-journal-csum2 / -csum3  JBD2 checksum v2 (16-bit tag CRC) and v3
+//                   (32-bit tag CRC): descriptor tail, commit h_chksum[0],
+//                   superblock s_checksum and each data-block tag checksum
+//                   are CRC32C.  The same bytes must replay as the legacy log.
+//   ext4-journal-csum-bad  v3 journal with the first commit checksum flipped:
+//                   the engine must refuse the transaction (0 replays).  A
+//                   corrupt-log overlay is silent wrong data, worse than none.
 //
 // Also asserts the scan-source read-only invariant per image (whole-image
 // FNV-1a unchanged after scan + recovery).
@@ -433,6 +440,12 @@ int main()
         {"ext4-sparse",        false},  // depth-1 extent tree + holes, legacy indirect hole
         {"ext4-journal",       false},  // JBD2 replay: recovered from the log only
         {"ext4-journal-clean", false},  // s_start == 0 must replay nothing
+        // JBD2 checksum v2/v3: tag/commit/descriptor CRC32C must verify and
+        // replay the same bytes; a corrupted commit checksum must refuse ALL
+        // replay (a wrong overlay is worse than no replay).
+        {"ext4-journal-csum2", false},
+        {"ext4-journal-csum3", false},
+        {"ext4-journal-csum-bad", false},
     };
 
     for (const VariantSpec& v : variants) {

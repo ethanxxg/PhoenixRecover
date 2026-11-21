@@ -313,43 +313,155 @@ def itable_block_bytes(img, ino, override_raw):
     return blk, bytes(buf)
 
 
+# ── CRC32C (Castagnoli, reflected 0x82F63B78) ──────────────────────────────
+# Independent oracle implementation.  Linux jbd2 uses crc32c() with the same
+# polynomial; check vector: CRC32C("123456789") == 0xE3069283, matching the
+# C++ implementation in fs/refs/RefsCrypto.h.
+def _crc32c_table():
+    tbl = []
+    for i in range(256):
+        c = i
+        for _ in range(8):
+            c = (c >> 1) ^ (0x82F63B78 if (c & 1) else 0)
+        tbl.append(c & 0xFFFFFFFF)
+    return tbl
+
+
+_CRC32C_TBL = _crc32c_table()
+
+
+def crc32c_init():
+    return 0xFFFFFFFF
+
+
+def crc32c_update(state, data):
+    tbl = _CRC32C_TBL
+    for b in data:
+        state = tbl[(state ^ b) & 0xFF] ^ (state >> 8)
+    return state & 0xFFFFFFFF
+
+
+def crc32c(data, state=0xFFFFFFFF):
+    """Final CRC32C value (init 0xFFFFFFFF, xorout 0xFFFFFFFF)."""
+    return crc32c_update(state, data) ^ 0xFFFFFFFF
+
+
 # ── JBD2 record writers (all fields big-endian) ─────────────────────────────
 JBD2_MAGIC = 0xC03B3998
 JBD2_DESCRIPTOR, JBD2_COMMIT, JBD2_SB_V2, JBD2_REVOKE = 1, 2, 4, 5
 JBD2_FLAG_LAST_TAG = 0x0008
 JBD2_INCOMPAT_REVOKE = 0x0001
+JBD2_INCOMPAT_CSUM_V2 = 0x0008
+JBD2_INCOMPAT_CSUM_V3 = 0x0010
+JBD2_CRC32C_CHKSUM = 4
+
+# Fixed journal UUID.  The kernel derives j_csum_seed = crc32c(~0, uuid, 16).
+JBD_UUID = bytes(range(0x10, 0x20))
 
 
-def jbd_super(bs, maxlen, first, seq, start):
+def jbd_crc(data, seed=0xFFFFFFFF):
+    """Linux jbd2_chksum(): raw CHAINED crc32c state, NO xorout."""
+    return crc32c_update(seed, data)
+
+
+def jbd_seed():
+    return jbd_crc(JBD_UUID)
+
+
+def jbd_super(bs, maxlen, first, seq, start, csum=0):
+    """csum: 0 = no checksum, 2 = CSUM_V2, 3 = CSUM_V3."""
     b = struct.pack(">III", JBD2_MAGIC, JBD2_SB_V2, 0)          # h_sequence = 0
-    b += struct.pack(">IIIIII", bs, maxlen, first, seq, start, 0)
-    b += struct.pack(">III", 0, JBD2_INCOMPAT_REVOKE, 0)        # compat/incompat/ro
-    b += b"\x00" * 16                                           # s_uuid
+    b += struct.pack(">IIIIII", bs, maxlen, first, seq, start, 0)  # ...s_errno
+    incompat = JBD2_INCOMPAT_REVOKE
+    if csum == 2:
+        incompat |= JBD2_INCOMPAT_CSUM_V2
+    elif csum == 3:
+        incompat |= JBD2_INCOMPAT_CSUM_V3
+    b += struct.pack(">III", 0, incompat, 0)                     # compat/incompat/ro
+    b += JBD_UUID                                               # s_uuid @ 0x30
     b += struct.pack(">IIII", 1, 0, 0, 0)                       # nr_users, ...
+    if csum:
+        # s_checksum_type @ 0x50
+        b = b[:0x50] + bytes([JBD2_CRC32C_CHKSUM]) + b[0x51:]
+        # s_checksum @ 0xFC = jbd2_chksum(seed, WHOLE sb block with that
+        # 4-byte field zeroed) — same rule as commit/desc tails, not a prefix.
+        buf = bytearray(b + b"\x00" * (bs - len(b)))
+        struct.pack_into(">I", buf, 0xFC, 0)
+        struct.pack_into(">I", buf, 0xFC, jbd_crc(bytes(buf), jbd_seed()))
+        return bytes(buf)
     return b + b"\x00" * (bs - len(b))
 
 
-def jbd_desc(bs, seq, targets):
-    """Descriptor block.  Targets are (blocknr, flags) in data-block order."""
-    body = struct.pack(">III", JBD2_MAGIC, JBD2_DESCRIPTOR, seq)
+def jbd_desc(bs, seq, targets, csum=0, data_blocks=None, bad_tchecksum=False,
+             bad_desc_csum=False):
+    """Descriptor block.  Targets are (blocknr, flags) in data-block order.
+
+    csum=0: 8-byte legacy tag (be32 blocknr, be16 csum=0, be16 flags).
+    csum=2: 8-byte v2 tag; t_checksum = low16 of crc32c(seed, be32(seq), data).
+    csum=3: 16-byte v3 tag (be32 blocknr, be32 flags, be32 high=0, be32 csum).
+    `data_blocks[i]` is the raw data-block bytes for target i, used to compute
+    the per-tag checksum exactly as jbd2_block_tag_csum_set() does.
+    """
+    body = bytearray(struct.pack(">III", JBD2_MAGIC, JBD2_DESCRIPTOR, seq))
+    seed = jbd_seed()
+    seq_be = struct.pack(">I", seq)
     for i, (bn, flags) in enumerate(targets):
         if i == len(targets) - 1:
             flags |= JBD2_FLAG_LAST_TAG
-        # journal_block_tag_s: be32 blocknr, be16 checksum, be16 flags
-        body += struct.pack(">IHH", bn, 0, flags)
-    assert len(body) <= bs
-    return body + b"\x00" * (bs - len(body))
+        if csum == 0:
+            body += struct.pack(">IHH", bn, 0, flags)
+        else:
+            raw = data_blocks[i] if data_blocks else b""
+            # two chained raw jbd2_chksum calls: (seed, seq) then (state, data)
+            c = jbd_crc(raw, jbd_crc(seq_be, jbd_seed()))
+            if bad_tchecksum and i == 0:
+                c ^= 0xFFFF
+            if csum == 2:
+                body += struct.pack(">IHH", bn, c & 0xFFFF, flags)
+            else:  # csum == 3
+                body += struct.pack(">IIII", bn, flags, 0, c)
+    assert len(body) <= bs - (4 if csum else 0)
+    if csum:
+        # descriptor/revoke tail: be32 csum over whole block with tail zeroed
+        buf = bytearray(body + b"\x00" * (bs - len(body)))
+        struct.pack_into(">I", buf, bs - 4, 0)
+        d = jbd_crc(bytes(buf), seed)
+        if bad_desc_csum:
+            d ^= 0xFFFFFFFF
+        struct.pack_into(">I", buf, bs - 4, d)
+        return bytes(buf)
+    return bytes(body + b"\x00" * (bs - len(body)))
 
 
-def jbd_commit(bs, seq):
-    return struct.pack(">III", JBD2_MAGIC, JBD2_COMMIT, seq) + b"\x00" * (bs - 12)
+def jbd_commit(bs, seq, csum=0, bad_csum=False):
+    b = bytearray(struct.pack(">III", JBD2_MAGIC, JBD2_COMMIT, seq))
+    if csum:
+        # h_chksum_type @ 0x0C, h_chksum_size @ 0x0D, h_chksum[0] @ 0x10
+        b += bytes([JBD2_CRC32C_CHKSUM, 4, 0, 0])
+        b += b"\x00" * (0x10 - len(b))
+        b += b"\x00" * 4                                         # h_chksum[0]=0
+        b += b"\x00" * (bs - len(b))
+        struct.pack_into(">I", b, 0x10, 0)
+        c = jbd_crc(bytes(b), jbd_seed())
+        if bad_csum:
+            c ^= 0xFFFFFFFF
+        struct.pack_into(">I", b, 0x10, c)
+        return bytes(b)
+    return bytes(b + b"\x00" * (bs - len(b)))
 
 
-def jbd_revoke(bs, blocks):
-    # r_count counts the bytes used including the 12-byte header.
-    body = struct.pack(">III", JBD2_MAGIC, JBD2_REVOKE, 12 + 4 * len(blocks))
+def jbd_revoke(bs, blocks, csum=0):
+    # r_count counts the bytes used including the 12-byte header (tail excluded
+    # from r_count when csum is on, matching the kernel).
+    used = 12 + 4 * len(blocks)
+    body = struct.pack(">III", JBD2_MAGIC, JBD2_REVOKE, used)
     body += b"".join(struct.pack(">I", b) for b in blocks)
-    assert len(body) <= bs
+    assert len(body) <= bs - (4 if csum else 0)
+    if csum:
+        buf = bytearray(body + b"\x00" * (bs - len(body)))
+        struct.pack_into(">I", buf, bs - 4, 0)
+        struct.pack_into(">I", buf, bs - 4, jbd_crc(bytes(buf), jbd_seed()))
+        return bytes(buf)
     return body + b"\x00" * (bs - len(body))
 
 
@@ -731,9 +843,13 @@ def build_sparse_depth():
 JOURNAL_BLOCKS = 24
 
 
-def build_journal(clean=False):
+def build_journal(clean=False, csum=0, corrupt=None):
     """JBD2 replay: metadata that was committed to the journal but never
     checkpointed to its home location.
+
+    csum=0 legacy (no checksum), 2 = CSUM_V2 (16-bit tag csum), 3 = CSUM_V3
+    (32-bit tag csum).  `corrupt` may be 'tag' / 'commit' / 'desc' to poison
+    exactly one checksum and prove the engine refuses the whole transaction.
 
     This is the crash window a recovery tool exists for.  The file
     `rescue.bin` was created, the kernel logged its inode-table block and the
@@ -828,21 +944,36 @@ def build_journal(clean=False):
                        (18, "later.txt", FT_REG)], bs)
     dir_poison = dirblock([(19, "poison.txt", FT_REG)], bs)
 
+    # For csum modes, each descriptor's tag checksums are computed over the
+    # matching data blocks.  'corrupt' poisons the FIRST transaction only so
+    # the expected outcome is deterministic (later txns would otherwise still
+    # restore dir block 0 and hide the refusal).
+    def desc(seq, targets, data, first=False):
+        bad_tag = (corrupt == 'tag' and first)
+        bad_desc = (corrupt == 'desc' and first)
+        return jbd_desc(bs, seq, targets, csum=csum,
+                        data_blocks=data, bad_tchecksum=bad_tag,
+                        bad_desc_csum=bad_desc)
+
+    def commit(seq, first=False):
+        return jbd_commit(bs, seq, csum=csum,
+                          bad_csum=(corrupt == 'commit' and first))
+
     log = {
-        0:  jbd_super(bs, JOURNAL_BLOCKS, 1, 100, 0 if clean else 1),
-        1:  jbd_desc(bs, 100, [(itbl_blk, 0), (root_l0, 0)]),
+        0:  jbd_super(bs, JOURNAL_BLOCKS, 1, 100, 0 if clean else 1, csum=csum),
+        1:  desc(100, [(itbl_blk, 0), (root_l0, 0)], [itbl_img, dir_v1], first=True),
         2:  itbl_img,
         3:  dir_v1,
-        4:  jbd_commit(bs, 100),
-        5:  jbd_desc(bs, 101, [(root_l0, 0)]),
+        4:  commit(100, first=True),
+        5:  desc(101, [(root_l0, 0)], [dir_v2]),
         6:  dir_v2,
-        7:  jbd_revoke(bs, [root_l1]),
-        8:  jbd_commit(bs, 101),
-        9:  jbd_desc(bs, 102, [(root_l1, 0)]),
+        7:  jbd_revoke(bs, [root_l1], csum=csum),
+        8:  commit(101),
+        9:  desc(102, [(root_l1, 0)], [dir_poison]),
         10: dir_poison,
-        11: jbd_commit(bs, 102),
-        12: jbd_revoke(bs, [root_l1]),
-        13: jbd_commit(bs, 103),
+        11: commit(102),
+        12: jbd_revoke(bs, [root_l1], csum=csum),
+        13: commit(103),
     }
     for idx, data in log.items():
         img.write_block(jblk + idx, data)
@@ -859,13 +990,34 @@ def build_journal(clean=False):
         name = "ext4-journal-clean"
         purpose = ("journal that was cleanly checkpointed (s_start = 0): "
                    "nothing may be replayed")
-        journal = {"start": 0, "appliedTransactions": 0, "overlayBlocks": 0}
+        journal = {"start": 0, "appliedTransactions": 0, "overlayBlocks": 0,
+                   "csum": csum}
         absent += ["rescue.bin", "later.txt"]
+    elif corrupt:
+        name = "ext4-journal-csum-bad"
+        purpose = ("JBD2 checksum v3 journal whose first commit block checksum "
+                   "is corrupted: the engine must refuse to replay ANY "
+                   "transaction (a wrong overlay is worse than no replay)")
+        journal = {"start": 1, "appliedTransactions": 0, "overlayBlocks": 0,
+                   "csum": csum, "corrupt": corrupt}
+        absent += ["rescue.bin", "later.txt"]
+    elif csum:
+        name = "ext4-journal-csum2" if csum == 2 else "ext4-journal-csum3"
+        purpose = ("JBD2 checksum v%s journal: tag/commit/descriptor CRC32C "
+                   "must verify and the same bytes replay as the legacy log"
+                   % csum)
+        journal = {"start": 1, "appliedTransactions": 2, "overlayBlocks": 2,
+                   "csum": csum}
+        files.append(manifest_entry("\\rescue.bin", "rescue.bin", len(rescue),
+                                    rescue, "normal"))
+        files.append(manifest_entry("\\later.txt", "later.txt", len(later),
+                                    later, "normal"))
     else:
         name = "ext4-journal"
         purpose = ("JBD2 replay: inode + dirent only exist in the committed log; "
                    "a revoked block must stay at its home content")
-        journal = {"start": 1, "appliedTransactions": 2, "overlayBlocks": 2}
+        journal = {"start": 1, "appliedTransactions": 2, "overlayBlocks": 2,
+                   "csum": 0}
         files.append(manifest_entry("\\rescue.bin", "rescue.bin", len(rescue),
                                     rescue, "normal"))
         files.append(manifest_entry("\\later.txt", "later.txt", len(later),
@@ -895,6 +1047,9 @@ VARIANTS = {
     "ext4-sparse": build_sparse_depth,
     "ext4-journal": lambda: build_journal(False),
     "ext4-journal-clean": lambda: build_journal(True),
+    "ext4-journal-csum2": lambda: build_journal(False, csum=2),
+    "ext4-journal-csum3": lambda: build_journal(False, csum=3),
+    "ext4-journal-csum-bad": lambda: build_journal(False, csum=3, corrupt='commit'),
 }
 
 

@@ -413,9 +413,21 @@
 5. **只应用已提交事务**：坏 magic / 缺 commit / 序号跳变即结束扫描，`pending` 直接丢弃。这正是内核崩溃后的行为，也保证"半个事务"永不进入 overlay。
 6. **超级块永不 overlay**：几何是 `Open()` 的其余逻辑赖以成立的前提，中途替换等于让读它的代码重新解释整个卷。GDT 则在回放后**重读一次**（组描述符本身可能被日志化）。
 7. **`s_start == 0` 必须短路**：那表示日志已 checkpoint，盘上就是最新状态。缺这道判断就会把"日志区里有内容"当成"有待回放事务"，凭空造出已删除的文件——`ext4-journal-clean` 变体专职守这条。
-8. **兼容现代日志**：`journal_block_tag_s` 无论是否启用 csum v2/v3 都是 8 B（64BIT 时 12 B），checksum 字段只在不校验时被忽略，故 tag 解析对 `metadata_csum` 卷同样成立；实现按 `JBD2_FEATURE_INCOMPAT_64BIT` 选 12/8 B，并支持 `JBD2_FLAG_ESCAPE`（首 4 B 被写成 0 时还原 magic）与 `JBD2_FLAG_DELETED`（不占数据块）。
+8. **兼容现代日志**：legacy/v2（无 64BIT）tag 为 8 B（be32 blocknr + be16 csum + be16 flags），v3 为 16 B（be32 blocknr + be32 flags + be32 high + be32 csum）；支持 `JBD2_FLAG_ESCAPE`（首 4 B 被写成 0 时还原 magic）与 `JBD2_FLAG_DELETED`（不占数据块）。64BIT 日志主动拒绝（避免误解析产生错误 overlay）。
 
-**仍未覆盖**：JBD2 checksum 校验（v2/v3 的 tag/commit CRC）、`metadata_csum` 的 inode/组描述符校验、外部日志设备（`s_journal_dev`）、`FLEX_BG` 跨组 GDT 重放；真实掉电卷未测。
+### CAR-006b：JBD2 checksum v2/v3 校验（W14 补齐 —— 防"损坏日志→静默错误数据"）
+此前回放**不校验**任何 checksum：坏盘上被位翻转/部分写入污染的日志块会把错误内容 overlay 到正确位置——比丢文件更危险（与 CAR-003 的教训同类）。依据内核 `jbd2` 的 `recovery.c`/`commit.c` 精确实现只读校验，**只在 `s_feature_incompat` 含 `CSUM_V2`(0x8)/`CSUM_V3`(0x10) 时启用**，无 checksum 的卷行为零变化。
+
+9. **`j_csum_seed` = jbd2_chksum(~0, s_uuid@0x30, 16)**：注意内核 `jbd2_chksum()` 是**无 xorout 的链式 CRC32C**（`crc32c_le` 返回原始状态直接作下一次 seed），复用 `fs/refs/RefsCrypto.h` 的 `Crc32CUpdate`（**不加** `Crc32CFinish`）。这是踩过的坑：加 xorout 会让每个 checksum 全部 desync。
+10. **superblock `s_checksum`@0xFC**：整块（该 4 B 清零后）的 raw CRC32C；`s_checksum_type`@0x50 必须是 `JBD2_CRC32C_CHKSUM`(4)。范围必须是**整块而非前 0xFC 前缀**——这是另一个踩过的坑。
+11. **descriptor/revoke 尾部 `jbd2_journal_block_tail`**（块末 4 B be32）：整块（尾部清零后）raw CRC32C；失败即结束扫描。
+12. **commit `h_chksum[0]`@0x10**：整块（该字段清零后）raw CRC32C；失败即**不提交该事务并结束扫描**（崩溃窗口的正确行为）。
+13. **每个 data block 的 tag checksum**：`csum = crc32c(seed, be32(seq)) → crc32c(csum, data_block)`；v3 存 tag+12 的 be32，v2 存 tag+4 的 be16 低 16 位。单个 tag 失败只**跳过该数据块**（内核 `goto skip_write`），不污染其他块。
+14. **tag 布局随特性切换**：v3 = 16 B（flags 在 +4、high 在 +8、csum 在 +12），v2/legacy = 8 B（csum 在 +4、flags 在 +6）。
+
+Oracle（`tools/make_ext4_fixture.py`）自带独立表驱动 CRC32C（校验向量 `CRC32C("123456789")=0xE3069283`，与 C++ 一致），造 3 变体：`ext4-journal-csum2`/`csum3`（正确 CRC，回放结果与 legacy 逐字节一致）、`ext4-journal-csum-bad`（仅翻坏第一事务的 commit checksum，引擎必须 0 回放）。CTest `Ext4DepthFeatures` 由 259→**279 checks / 0 failure**。源码级负向守卫：把 commit 校验改成 `if(false && ...)` → csum-bad 错误回放 2 事务、rescue/later 凭空出现、**4 FAIL / exit 1**，证明门禁真实有效。
+
+**仍未覆盖**：`metadata_csum` 的 inode/组描述符校验、外部日志设备（`s_journal_dev`）、`FLEX_BG` 跨组 GDT 重放；JBD v1 日志（旧 ext3，主动拒绝而非误解析）；真实掉电卷未测。
 
 ### 本批次已闭环（W6–W9，此前列为未完成，现据实更正）
 
