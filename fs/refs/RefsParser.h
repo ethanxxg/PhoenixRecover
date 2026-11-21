@@ -16,8 +16,13 @@
 //   inline data                ->  FileNode::residentData
 //
 // Coverage boundary (must not be over-claimed):
-//   * Deleted files: ReFS does not keep unlinked directory entries, so only
-//     live entries are enumerated.  There is no deleted-name recovery here.
+//   * Deleted files: ReFS removes the directory row and the object-table link
+//     on delete, so there is no live unlinked-entry list to read.  Recovery is
+//     possible only from residue: a byte-complete MSB+ directory page that is
+//     unreachable from the live checkpoint roots still carries the original
+//     name + extents, and its data clusters remain allocated in the image.
+//     ScanMetadata() emits those rows as FileStatus::Deleted nodes.  USN
+//     journal parsing and real-volume stale-page coverage remain out of scope.
 //   * Split records (key_flags 0x02) are reported as entries without data
 //     (dataAvailable = false) and marked Lost, never as zero-filled files.
 //   * Nested directories: a directory entry carries a name, metadata and an
@@ -70,7 +75,7 @@ private:
                             const std::wstring& path, int depth,
                             std::atomic<bool>* cancelFlag);
     bool BuildNode(const phoenix::refs::RefsDirEntry& entry, uint64_t parentNodeId,
-                   const std::wstring& path, FileNode& out);
+                   const std::wstring& path, FileNode& out, bool deleted = false);
 
     SectorReader*      m_reader = nullptr;
     Partition          m_part;

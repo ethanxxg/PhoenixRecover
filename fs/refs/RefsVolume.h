@@ -486,6 +486,127 @@ public:
         return true;
     }
 
+    // -- residual (deleted) directory-row scan -----------------------------
+    // A ReFS delete removes the directory row and drops the object-table
+    // reference, but the B+-tree page bytes and the file's data clusters are
+    // left in place until reused.  Enumerate rows that are byte-complete in a
+    // well-formed MSB+ directory page *not reachable from the live checkpoint
+    // roots* -- i.e. the residue of a deleted file.  The visitor receives the
+    // table id (usually a directory OID) plus the raw key/value; callers can
+    // feed them to ParseDirEntry through ParseResidualRow() below.
+    //
+    // Selection rules (all falsifiable on the synthetic corpus):
+    //   * MSB+ signature, page version 2, matching volume signature;
+    //   * the page's self-LCN resolves back to its own physical location and
+    //     is NOT in the reachable set walked from all 13 checkpoint roots;
+    //   * a structurally valid leaf node (level 0) whose rows decode as
+    //     type-0x30 directory entries.
+    // A stale page has no parent PageRef, so its Merkle digest cannot be
+    // re-verified; structural validity + unreachability is the admission bar.
+    // Returns the number of rows offered to the visitor.
+    using ResidualRowVisitor = std::function<void(uint64_t tableId,
+        const uint8_t* key, size_t keyLen, const uint8_t* val, size_t valLen)>;
+
+    size_t ForEachResidualDirRow(const ResidualRowVisitor& visit) const
+    {
+        if (!m_open || !visit) return 0;
+        const RefsGeometry& g = m_info.geometry;
+        const uint64_t pageSize = g.pageSize;
+        const uint32_t cpp = g.clustersPerPage;
+
+        // 1. Collect every page reference reachable from the 13 roots,
+        //    following internal nodes.  Those are live pages, never residue.
+        std::unordered_set<uint64_t> reachable;
+        std::unordered_set<uint64_t> walkSeen;
+        for (size_t i = 0; i < m_roots.size(); ++i) {
+            const bool vaddr = !(i == 7 || i == 8 || i == 12);
+            CollectReachableRefs(m_roots[i], vaddr, reachable, walkSeen, 0);
+        }
+        // The object table is a *leaf* page whose row values embed the
+        // PageRefs of every live directory.  Walking internal nodes from the
+        // 13 roots alone never reaches those values, so without this step all
+        // live directory pages look unreachable and get mislabelled deleted.
+        for (const auto& kv : m_objectRoots)
+            CollectReachableRefs(kv.second, true, reachable, walkSeen, 0);
+
+        // 2. Scan every physical cluster that could start an MSB+ page.
+        size_t offered = 0;
+        std::vector<uint8_t> page(static_cast<size_t>(pageSize));
+        for (uint64_t lcn = 0; lcn + cpp <= g.totalClusters; ++lcn) {
+            if (!ReadAt(lcn * g.clusterSize, page.data(),
+                        static_cast<size_t>(g.clusterSize))) continue;
+            if (std::memcmp(page.data(), "MSB+", 4) != 0) continue;
+            if (refs_detail::Le32(page.data() + 0x04) != 2u) continue;
+            if (refs_detail::Le32(page.data() + 0x0C) != m_info.volumeSignature) continue;
+            const uint64_t selfLcn = refs_detail::Le64(page.data() + 0x20);
+            if (selfLcn == 0 || reachable.count(selfLcn)) continue;
+
+            // The self-LCN must resolve back to where we actually found it,
+            // otherwise this is stray/zeroed bytes that happen to look like a
+            // page header -- never surface it as a deleted file.
+            bool vaddr = true;
+            uint64_t mapped = 0;
+            if (!ResolveLcn(selfLcn, true, mapped) || mapped != lcn) {
+                vaddr = false;
+                if (!ResolveLcn(selfLcn, false, mapped) || mapped != lcn) continue;
+            }
+
+            // Finish reading the remaining clusters of this page.
+            bool whole = true;
+            for (uint32_t c = 1; c < cpp; ++c) {
+                uint64_t plcn = 0;
+                if (!ResolveLcn(selfLcn + c, vaddr, plcn) ||
+                    !ReadAt(plcn * g.clusterSize,
+                            page.data() + static_cast<size_t>(c) * g.clusterSize,
+                            static_cast<size_t>(g.clusterSize))) { whole = false; break; }
+            }
+            if (!whole) continue;
+
+            const uint32_t nhOff = refs_detail::Le32(page.data() + 0x50);
+            const size_t nh = 0x50u + nhOff;
+            if (nh + 0x28 > page.size()) continue;
+            if (page[nh + 0x0C] != 0) continue;   // leaf node only
+            const uint32_t idxStart = refs_detail::Le32(page.data() + nh + 0x10);
+            const uint32_t count    = refs_detail::Le32(page.data() + nh + 0x14);
+            const uint32_t idxEnd   = refs_detail::Le32(page.data() + nh + 0x20);
+            if (idxEnd < idxStart || idxEnd - idxStart != count * 4u) continue;
+            if (count == 0 || count > 4096 || nh + idxEnd > page.size()) continue;
+            const uint64_t tableId = refs_detail::Le64(page.data() + 0x48);
+
+            for (uint32_t r = 0; r < count; ++r) {
+                const size_t ent = nh + idxStart + 4ull * r;
+                if (ent + 4 > page.size()) break;
+                const size_t row = nh + refs_detail::Le16(page.data() + ent);
+                if (row + 0x10 > page.size()) continue;
+                const uint32_t rowSize = refs_detail::Le32(page.data() + row);
+                const uint16_t keyOff  = refs_detail::Le16(page.data() + row + 0x04);
+                const uint16_t keyLen  = refs_detail::Le16(page.data() + row + 0x06);
+                const uint16_t valOff  = refs_detail::Le16(page.data() + row + 0x0A);
+                const uint16_t valLen  = refs_detail::Le16(page.data() + row + 0x0C);
+                if (rowSize < 0x10 || row + rowSize > page.size()) continue;
+                if (static_cast<uint64_t>(keyOff) + keyLen > rowSize ||
+                    static_cast<uint64_t>(valOff) + valLen > rowSize) continue;
+                const uint8_t* key = page.data() + row + keyOff;
+                if (keyLen < 4 || refs_detail::Le16(key) != 0x30u) continue;
+                visit(tableId, key, keyLen, page.data() + row + valOff, valLen);
+                ++offered;
+            }
+        }
+        return offered;
+    }
+
+    // Decode one residual key/value into the same RefsDirEntry shape that
+    // ListDirectory() produces.  Returns false for non-file rows.
+    bool ParseResidualRow(uint64_t tableId,
+                          const uint8_t* key, size_t keyLen,
+                          const uint8_t* val, size_t valLen,
+                          RefsDirEntry& out) const
+    {
+        if (!m_open) return false;
+        const RefsStatus s = ParseDirEntry(tableId, key, keyLen, val, valLen, out);
+        return s == RefsStatus::Ok;
+    }
+
 private:
     // -- shared state ------------------------------------------------------
     struct PageRef
@@ -862,6 +983,57 @@ private:
             }
         }
         return RefsStatus::Ok;
+    }
+
+    // Collect the self-LCN of every page reachable from a checkpoint root.
+    // Byte reads only: no status mutation, no checksum requirement (the live
+    // tree was already validated during Open).  Unknown/corrupt internal
+    // nodes are skipped conservatively -- they cannot make a stale page live.
+    void CollectReachableRefs(const PageRef& ref, bool virtualAddr,
+                              std::unordered_set<uint64_t>& out,
+                              std::unordered_set<uint64_t>& seen,
+                              uint32_t depth) const
+    {
+        if (depth > 12 || ref.lcn[0] == 0) return;
+        if (!seen.insert(ref.lcn[0]).second) return;
+        out.insert(ref.lcn[0]);
+
+        const RefsGeometry& g = m_info.geometry;
+        std::vector<uint8_t> page;
+        page.reserve(static_cast<size_t>(g.pageSize));
+        std::vector<uint8_t> cluster(static_cast<size_t>(g.clusterSize));
+        for (uint32_t i = 0; i < g.clustersPerPage; ++i) {
+            uint64_t plcn = 0;
+            if (!ResolveLcn(ref.lcn[i], virtualAddr, plcn)) return;
+            if (!ReadAt(plcn * g.clusterSize, cluster.data(), cluster.size())) return;
+            page.insert(page.end(), cluster.begin(), cluster.end());
+        }
+        if (page.size() < 0x50 + 4 || std::memcmp(page.data(), "MSB+", 4) != 0) return;
+        const uint32_t nhOff = refs_detail::Le32(page.data() + 0x50);
+        const size_t nh = 0x50u + nhOff;
+        if (nh + 0x28 > page.size()) return;
+        const uint8_t level = page[nh + 0x0C];
+        if (level == 0) return;   // leaf: no children to follow
+        const uint32_t idxStart = refs_detail::Le32(page.data() + nh + 0x10);
+        const uint32_t count    = refs_detail::Le32(page.data() + nh + 0x14);
+        const uint32_t idxEnd   = refs_detail::Le32(page.data() + nh + 0x20);
+        if (idxEnd < idxStart || idxEnd - idxStart != count * 4u) return;
+        if (count > 4096 || nh + idxEnd > page.size()) return;
+        for (uint32_t i = 0; i < count; ++i) {
+            const size_t ent = nh + idxStart + 4ull * i;
+            if (ent + 4 > page.size()) break;
+            const size_t row = nh + refs_detail::Le16(page.data() + ent);
+            if (row + 0x10 > page.size()) continue;
+            const uint32_t rowSize = refs_detail::Le32(page.data() + row);
+            const uint16_t valOff  = refs_detail::Le16(page.data() + row + 0x0A);
+            const uint16_t valLen  = refs_detail::Le16(page.data() + row + 0x0C);
+            if (rowSize < 0x10 || row + rowSize > page.size()) continue;
+            if (static_cast<uint64_t>(valOff) + valLen > rowSize ||
+                valLen < m_info.pageRefSize) continue;
+            PageRef child;
+            if (!ParsePageRef(page.data() + row + valOff, valLen, child)) continue;
+            CollectReachableRefs(child, virtualAddr, out, seen, depth + 1);
+        }
     }
 
     RefsStatus VerifyRootPages() const

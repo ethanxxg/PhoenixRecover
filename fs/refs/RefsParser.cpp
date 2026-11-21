@@ -92,7 +92,8 @@ bool RefsParser::Open(SectorReader& reader, const Partition& partition)
 }
 
 bool RefsParser::BuildNode(const RefsDirEntry& entry, uint64_t parentNodeId,
-                           const std::wstring& path, FileNode& out)
+                           const std::wstring& path, FileNode& out,
+                           bool deleted)
 {
     out = FileNode{};
     out.id           = m_nextId++;
@@ -104,7 +105,7 @@ bool RefsParser::BuildNode(const RefsDirEntry& entry, uint64_t parentNodeId,
     out.createTime   = entry.createTime;
     out.modifyTime   = entry.modifyTime;
     out.accessTime   = entry.accessTime;
-    out.status       = FileStatus::Normal;      // ReFS keeps no unlinked names
+    out.status       = deleted ? FileStatus::Deleted : FileStatus::Normal;
     out.fsType       = L"ReFS";
 
     const size_t dot = entry.name.rfind(L'.');
@@ -243,6 +244,26 @@ bool RefsParser::ScanMetadata(std::function<void(int)> onProgress,
     if (!m_valid || !m_volume) return false;
 
     EnumerateDirectory(RefsVolume::kRootDirectoryOid, 0, L"\\", 0, cancelFlag);
+
+    // Deleted residue: rows that survive in MSB+ pages unreachable from the
+    // live checkpoint roots.  Reuse BuildNode so name/extension/timestamps,
+    // extent translation and resident-data handling stay identical to live
+    // files; only the status differs (Deleted, never counted as in-use).
+    m_volume->ForEachResidualDirRow(
+        [&](uint64_t tableId, const uint8_t* key, size_t keyLen,
+            const uint8_t* val, size_t valLen) {
+            if (cancelFlag && cancelFlag->load()) return;
+            RefsDirEntry entry;
+            if (!m_volume->ParseResidualRow(tableId, key, keyLen, val, valLen, entry))
+                return;
+            if (entry.name.empty() || entry.isDirectory || entry.name == L"." ||
+                entry.name == L"..") return;
+            FileNode node;
+            if (!BuildNode(entry, 0, L"\\", node, true)) return;
+            ++m_totalEntries;
+            m_files.push_back(node);
+            if (m_onFileFound) m_onFileFound(node);
+        });
 
     if (onProgress) onProgress(100);
     LOG_INFO(L"RefsParser::ScanMetadata – entries=" + std::to_wstring(m_totalEntries) +

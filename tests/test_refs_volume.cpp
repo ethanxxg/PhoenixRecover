@@ -134,8 +134,8 @@ int main()
     std::printf("RefsVolume golden dir: %s\n", dir.c_str());
     const auto caseLines = ReadLines(dir + "cases.tsv");
     const auto fileLines = ReadLines(dir + "files.tsv");
-    CHECK(caseLines.size() == 14, "cases.tsv: header + 13 cases");
-    CHECK(fileLines.size() == 49, "files.tsv: header + 48 expectations");
+    CHECK(caseLines.size() == 15, "cases.tsv: header + 14 cases");
+    CHECK(fileLines.size() == 55, "files.tsv: header + 54 live expectations");
 
     std::map<std::string, std::vector<ExpectFile>> expected;
     for (size_t i = 1; i < fileLines.size(); ++i) {
@@ -291,10 +291,10 @@ int main()
         }
     }
 
-    CHECK(okCases == 8, "8 positive volumes verified");
+    CHECK(okCases == 9, "9 positive volumes verified");
     CHECK(negativeCases == 5, "5 negative volumes correctly refused");
-    CHECK(filesChecked == 48, "48 file expectations compared");
-    CHECK(contentChecked == 40, "40 file contents reconstructed");
+    CHECK(filesChecked == 54, "54 live file expectations compared");
+    CHECK(contentChecked == 45, "45 live file contents reconstructed");
 
     // ---- Read-only guarantee + in-memory tamper detection -----------------
     {

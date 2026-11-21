@@ -95,9 +95,10 @@ std::vector<std::string> SplitTabs(const std::string& line)
     return out;
 }
 
-bool LoadExpectations(const std::string& caseName, std::vector<Expected>& out)
+bool LoadExpectations(const std::string& caseName, std::vector<Expected>& out,
+                      const std::string& table = "files.tsv")
 {
-    const std::wstring path = GoldenDir() + L"/files.tsv";
+    const std::wstring path = GoldenDir() + L"/" + Utils::Utf8ToWide(table);
     std::ifstream f(Utils::WideToUtf8(path));
     if (!f) return false;
 
@@ -322,12 +323,128 @@ void RunCase(const std::string& caseName)
     CHECK(after == before, "whole-image FNV-1a unchanged (scan source is read-only)");
 }
 
+// A deleted ReFS file has no live directory row.  Its name + extents survive
+// in an MSB+ page unreachable from the checkpoint roots, and its bytes survive
+// in orphaned clusters.  The engine must emit it as FileStatus::Deleted and
+// RecoverEngine must reproduce the exact bytes from deleted.tsv truth.
+void RunDeletedCase(const std::string& caseName)
+{
+    std::printf("-- %s (deleted residue)\n", caseName.c_str());
+
+    std::vector<Expected> expected;
+    if (!LoadExpectations(caseName, expected, "deleted.tsv")) {
+        ++g_checks; ++g_fails;
+        std::fprintf(stderr, "FAIL: deleted.tsv has no rows for %s\n", caseName.c_str());
+        return;
+    }
+    CHECK(expected.size() == 1, "exactly one deleted truth row in deleted.tsv");
+
+    const std::wstring image = GoldenDir() + L"/" +
+                               Utils::Utf8ToWide(caseName) + L".bin";
+    const uint64_t before = Fnv1aFile(image);
+    CHECK(before != 0, "golden ReFS image is readable");
+
+    SectorReader reader;
+    CHECK(reader.OpenImage(image), "SectorReader opens the ReFS image");
+    if (!reader.IsOpen()) return;
+
+    const uint32_t ss = reader.GetSectorSize();
+    Partition part;
+    part.startSector = 0;
+    part.totalSectors = 0;
+    {
+        FILE* f = _wfopen(image.c_str(), L"rb");
+        if (f) {
+            _fseeki64(f, 0, SEEK_END);
+            const long long n = _ftelli64(f);
+            fclose(f);
+            part.totalSectors = static_cast<uint64_t>(n) / (ss ? ss : 512);
+        }
+    }
+    part.sizeBytes = part.totalSectors * (ss ? ss : 512);
+    part.fsType = L"";
+
+    ScanResult scanResult;
+    std::unique_ptr<FileSystem> parser =
+        FileSystemModuleService::CreateParserForPartition(reader, part, scanResult);
+    CHECK(parser != nullptr, "probe chain recognises the ReFS volume");
+    if (!parser) { reader.Close(); return; }
+    CHECK(parser->Open(reader, part), "RefsParser::Open succeeds");
+    CHECK(parser->ScanMetadata(), "RefsParser::ScanMetadata succeeds");
+
+    const std::vector<FileNode> nodes = parser->GetAllFiles();
+    int liveCount = 0, deletedCount = 0;
+    for (const FileNode& n : nodes) {
+        if (n.status == FileStatus::Normal)  ++liveCount;
+        if (n.status == FileStatus::Deleted) ++deletedCount;
+    }
+    std::printf("   enumerated %zu nodes (%d live, %d deleted)\n",
+                nodes.size(), liveCount, deletedCount);
+    CHECK(liveCount == 6, "six live entries remain Normal");
+    CHECK(deletedCount == 1, "exactly one deleted residue node emitted");
+    // The stale page must never be re-counted as a live file.
+    CHECK(nodes.size() == 7, "live set plus one deleted node, no duplicates");
+
+    const std::wstring outDir = MakeOutDir(caseName);
+    RecoverEngine engine;
+    for (const Expected& e : expected) {
+        const std::wstring wname = Utils::Utf8ToWide(e.name);
+        const FileNode* node = nullptr;
+        for (const FileNode& n : nodes) {
+            if (n.name == wname) { node = &n; break; }
+        }
+        std::printf("   %-14s ", e.name.c_str());
+        if (!node) {
+            std::printf("MISSING\n");
+            ++g_checks; ++g_fails;
+            std::fprintf(stderr, "FAIL: deleted node not found: %s\n", e.name.c_str());
+            continue;
+        }
+        CHECK(node->status == FileStatus::Deleted, "residue node status is Deleted");
+        CHECK(static_cast<long long>(node->size) == e.size,
+              "deleted node size matches deleted.tsv");
+        CHECK(node->recoverability != RecoverabilityLevel::Lost,
+              "deleted node keeps recoverable clusters");
+
+        const FileRecoverResult rr = engine.RecoverFile(*node, outDir, false, reader, part);
+        if (rr.status != RecoverStatus::Success || rr.targetPath.empty()) {
+            std::printf("RECOVER FAILED\n");
+            ++g_checks; ++g_fails;
+            std::fprintf(stderr, "FAIL: RecoverEngine failed for deleted %s\n", e.name.c_str());
+            continue;
+        }
+        char      hex[65]{};
+        long long got = 0;
+        const bool hashed = Sha256OfFile(rr.targetPath, hex, got);
+        CHECK(hashed, "recovered deleted output is readable");
+        CHECK(got == e.size, "recovered byte count equals deleted logical size");
+        if (hashed && !e.sha256.empty()) {
+            const bool same = (std::strcmp(hex, e.sha256.c_str()) == 0);
+            ++g_checks;
+            if (!same) {
+                ++g_fails;
+                std::fprintf(stderr, "FAIL: deleted sha256 mismatch for %s\n"
+                                     "  got  %s\n  want %s\n",
+                             e.name.c_str(), hex, e.sha256.c_str());
+            }
+            std::printf("%s deleted\n", same ? "bytes ok" : "BYTES WRONG");
+        }
+        DeleteFileW(rr.targetPath.c_str());
+    }
+
+    RemoveDirectoryW(outDir.c_str());
+    reader.Close();
+    const uint64_t after = Fnv1aFile(image);
+    CHECK(after == before, "whole-image FNV-1a unchanged (scan source is read-only)");
+}
+
 } // namespace
 
 int main()
 {
     RunCase("refs_v314_crc64_basic");
     RunCase("refs_v314_sha256");
+    RunDeletedCase("refs_v314_deleted_residual");
 
     std::printf("%s: RefsRecoverBytes %d checks, %d failure(s)\n",
                 g_fails ? "FAIL" : "OK", g_checks, g_fails);
